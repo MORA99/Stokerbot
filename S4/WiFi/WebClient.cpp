@@ -38,7 +38,7 @@ void WSInit() {
     WSclient.println();
     WSclient.print("Sec-WebSocket-Version: 13\r\n");
     WSclient.println();
-
+delay(1000);
 while (WSclient.available())
 {
  char c = WSclient.read();
@@ -47,6 +47,8 @@ while (WSclient.available())
 Serial.println("Handshake untested ..., websocket from here on out...");
 
 sendMessage("hello",5);
+sendPing();
+sendPong(); //Pong can be sent at anytime, theres no reply
 /*
 sendMessage("ADC1:120",8);
 
@@ -85,10 +87,11 @@ int WSRun(unsigned long now)
   {
     Serial.println("Disconnected...");
   }
-  Serial.print("Data : ");
-  Serial.println(WSclient.available());
   if (WSclient.available() > 0)
   {
+    Serial.print("Data : ");
+    Serial.println(WSclient.available());
+
     char c = WSclient.read();
     uint8_t op = c & 0b00001111;
     uint8_t fin = c & 0b10000000;
@@ -124,7 +127,8 @@ int WSRun(unsigned long now)
         if (len == 127)
         {
           //next 8 bytes are length
-          Serial.println("64bit outgoing messenges not supported");
+          Serial.println("64bit messenges not supported");
+          return;
         }
         
         Serial.print("Message is ");
@@ -141,7 +145,7 @@ int WSRun(unsigned long now)
           mask[3] = WSclient.read();
         }
         
-        char data[len+1];
+        char data[len+1]; //Max 16bit length message, so 65kbyte ...
         for (uint8_t i=0; i<len; i++)
         {
           data[i] = WSclient.read();
@@ -149,11 +153,14 @@ int WSRun(unsigned long now)
         }
         data[len] = NULL;
         Serial.println("Frame contents : ");
-        Serial.println(data);
-      }
+        Serial.println(data); //This is UTF-8 code, but for the general ASCII table UTF8 and ASCII are the same, so it wont matter if we dont send/recieve special chars.
+      } //Currently this code does not handle fragmented messenges, since a single message can be 64bit long, only streaming binary data seems likely to need fragmentation.
+      
     } else if (op == 0x08)
     {
       Serial.println("WS Disconnect opcode");
+      WSclient.write(op); //RFC requires we return a close op code before closing the connection
+      delay(25);
       WSclient.stop();
     } else if (op == 0x09)
     {
@@ -162,27 +169,31 @@ int WSRun(unsigned long now)
     } else if (op = 0x10)
     {
       Serial.println("Got pong ...");
+      c = WSclient.read();
+      char masked = c & 0b10000000;
+      uint16_t len = c & 0b01111111;      
+      while (len > 0) //A pong can contain app data, but shouldnt if we didnt send any...
+      {
+        WSclient.read();
+        len--;
+      }
     } else {
-      Serial.print("Unknown opcode ");
-      Serial.println(op);      
+      Serial.print("Unknown opcode "); //Or not start of package if we failed to parse the entire previous one
+      Serial.println(op);
     }
   }
-  //10000001 101 1101000 1100101 1101100 1101100 1101111
-  /*
-  fin=1, opcode=1
-  no mask, len=5
-  h e l l o
-  */
 }
 
 boolean sendPong()
 {
-  
+  WSclient.write(0x8A); //Pong
+  WSclient.write(0x00); //no mask, zero length
 }
 
 boolean sendPing()
 {
-  
+  WSclient.write(0x89); //Ping
+  WSclient.write(0x00); //no mask, zero length
 }
 
 boolean sendMessage(char* msg, uint16_t length)

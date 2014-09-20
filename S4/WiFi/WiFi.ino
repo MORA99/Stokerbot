@@ -18,6 +18,7 @@
 
  */
 
+#include "config.h"
 #include <SPI.h>
 #include <WiFi.h>
 #include <WiFiClient.h>
@@ -37,14 +38,6 @@ Queue tasks;
 BMA222 mySensor;
 Adafruit_TMP006 tmp006(0x41);
 
-
-// your network name also called SSID
-char ssid[] = "---";
-// your network password
-char password[] = "---";
-// your network key Index number (needed only for WEP)
-int keyIndex = 0;
-int clientid = 0;
 
 WiFiServer server(80);
 

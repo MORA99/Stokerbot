@@ -1,0 +1,7 @@
+// your network name also called SSID
+char ssid[] = "***";
+// your network password
+char password[] = "***";
+// your network key Index number (needed only for WEP)
+int keyIndex = 0;
+int clientid = 0;
