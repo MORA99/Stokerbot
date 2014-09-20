@@ -35,8 +35,9 @@
 using namespace ArduinoJson;
 
 Queue tasks;
-BMA222 mySensor;
+BMA222 accelerometer;
 Adafruit_TMP006 tmp006(0x41);
+WebsocketClient wsc("echo.websocket.org", 80, "/");
 
 
 WiFiServer server(80);
@@ -76,13 +77,13 @@ void setup() {
 
   //randomSeed(analogRead(14));
 
-  mySensor.begin();
-  WSInit();
+  accelerometer.begin();
+  wsc.connect();
 
 // tasks.scheduleFunction(exports, "exports", 0, 5000);
 // tasks.scheduleFunction(test, "test", 0, 100);
 //   tasks.scheduleFunction(accel, "accel", 0, 1000);
-   tasks.scheduleFunction(WSRun, "WSrun", 0, 1000);
+   tasks.scheduleFunction(second, "WSrun", 0, 1000);
 //   tasks.scheduleFunction(temp, "temp", 0, 1000);
     
   if (! tmp006.begin()) {
@@ -206,9 +207,9 @@ int accel(long unsigned int now)
 {
   Generator::JsonObject<4> root; 
   root["id"] = "CC3200";
-  root["x"] = mySensor.readXData();
-  root["y"] = mySensor.readYData();
-  root["z"] = mySensor.readZData();
+  root["x"] = accelerometer.readXData();
+  root["y"] = accelerometer.readYData();
+  root["z"] = accelerometer.readZData();
   char buffer[100];
   memset(buffer, NULL, sizeof(buffer));
   root.printTo(buffer, sizeof(buffer));  
@@ -216,3 +217,7 @@ int accel(long unsigned int now)
   sendMessage(buffer);
 }
 
+int second(long unsigned int now)
+{
+ wsc.run();
+}
