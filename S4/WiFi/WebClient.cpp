@@ -1,4 +1,10 @@
+#include <WiFi.h>
+#include <WiFiClient.h>
+#include "WebClient.h"
+
 WiFiClient WSclient;
+
+boolean sendPong();
 
 void WSInit() {
   char* path = "/";
@@ -32,7 +38,6 @@ void WSInit() {
     WSclient.println();
     WSclient.print("Sec-WebSocket-Version: 13\r\n");
     WSclient.println();
-delay(1000);
 
 while (WSclient.available())
 {
@@ -40,7 +45,7 @@ while (WSclient.available())
  Serial.print(c); 
 }
 Serial.println("Handshake untested ..., websocket from here on out...");
-delay(5000);
+
 sendMessage("hello",5);
 /*
 sendMessage("ADC1:120",8);
@@ -168,27 +173,20 @@ int WSRun(unsigned long now)
   no mask, len=5
   h e l l o
   */
-  while (WSclient.available())
-  {
-   char c = WSclient.read();
-   Serial.print(c,BIN); 
-   Serial.print(" ");    
-  }  
 }
 
-void sendPong()
+boolean sendPong()
 {
   
 }
 
-void sendPing()
+boolean sendPing()
 {
   
 }
 
-void sendMessage(char* msg, uint16_t length)
+boolean sendMessage(char* msg, uint16_t length)
 {
-  Serial.println("Sending packet");
 /*
 +-+-+-+-+-------+-+-------------+-------------------------------+
  0                   1                   2                   3
@@ -220,7 +218,7 @@ Opcodes
 */
   
 WSclient.write(0b10000001);
-Serial.print(0b10000001,HEX);
+
 /*
 payload_len (7 bits): the length of the payload.
 
@@ -230,10 +228,10 @@ payload_len (7 bits): the length of the payload.
 
 So it comes in ~7bit, 16bit and 64bit.
 */
+
 if (length <= 125) 
 {
   WSclient.write(0b10000000 | length);
-  Serial.print(0b10000000 | length,HEX);
 }
 else
 {
@@ -244,32 +242,12 @@ else
 //64bit outgoing messenges not supported
 
 byte mask[4];
-/*
-mask[0] = random(0, 255);
-mask[1] = random(0, 255);
-mask[2] = random(0, 255);
-mask[3] = random(0, 255);
-*/
-
-mask[0] = 0b00000000;
-mask[1] = 0b11111111;
-mask[2] = 0b00000000;
-mask[3] = 0b11111111;
-WSclient.write(mask[0]);
-WSclient.write(mask[1]);
-WSclient.write(mask[2]);
-WSclient.write(mask[3]);
-
-
-Serial.print(mask[0],HEX); 
-Serial.print(mask[1],HEX); 
-Serial.print(mask[2],HEX); 
-Serial.print(mask[3],HEX); 
-
+for (uint8_t i=0; i<4; i++)
+{
+  mask[i] = random(0, 255);
+  WSclient.write(mask[i]);
+}
 for (uint16_t i=0; i<length; i++) {
   WSclient.write(msg[i] ^ mask[i % 4]);
-  Serial.print(msg[i] ^ mask[i % 4], HEX);
 }
-Serial.println();
-Serial.println("Packet sent ..."); 
 }

@@ -29,6 +29,7 @@
 #include <Adafruit_TMP006.h>
 
 #include "Queue.h"
+#include "WebClient.h"
 
 using namespace ArduinoJson;
 
