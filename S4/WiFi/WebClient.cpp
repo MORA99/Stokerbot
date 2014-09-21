@@ -309,3 +309,4 @@ boolean WebsocketClient::sendMessage(char* msg, uint16_t length)
     client.write(msg[i] ^ mask[i % 4]);
   }
 }
+

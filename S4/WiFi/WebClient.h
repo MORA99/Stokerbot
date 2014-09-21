@@ -24,3 +24,4 @@ class WebsocketClient
   boolean sendMessage(char* msg, uint16_t length);
 };
 #endif
+

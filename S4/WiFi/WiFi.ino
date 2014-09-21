@@ -1,23 +1,3 @@
-/*
-  WiFi Web Server
-
- A simple web server that shows the value of the analog input pins.
- using a WiFi shield.
-
- This example is written for a network using WPA encryption. For
- WEP or WPA, change the Wifi.begin() call accordingly.
-
- Circuit:
- * WiFi shield attached
- * Analog inputs attached to pins A0 through A5 (optional)
-
- created 13 July 2010
- by dlf (Metodo2 srl)
- modified 31 May 2012
- by Tom Igoe
-
- */
-
 #include "config.h"
 #include <SPI.h>
 #include <WiFi.h>
@@ -31,6 +11,7 @@
 
 #include "Queue.h"
 #include "WebClient.h"
+#include "dht.h"
 
 using namespace ArduinoJson;
 
@@ -89,6 +70,13 @@ void setup() {
   if (! tmp006.begin()) {
     Serial.println("No sensor found");
   }  
+
+  int16_t rawhumidity;
+  int16_t rawtemperature;
+  int8_t res = dht_getdata(29, &rawtemperature, &rawhumidity);
+  Serial.print("Res:");Serial.println(res);
+  Serial.print("Temp:");Serial.println(rawtemperature);
+  Serial.print("Hum:");Serial.println(rawhumidity);  
 
 }
 
@@ -221,3 +209,4 @@ int second(long unsigned int now)
 {
  wsc.run();
 }
+

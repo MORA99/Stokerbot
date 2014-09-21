@@ -129,3 +129,4 @@ inline unsigned char b64_lookup(char c) {
 	if(c == '/') return 63;
 	return -1;
 }
+
