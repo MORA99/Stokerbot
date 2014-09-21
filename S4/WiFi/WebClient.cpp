@@ -131,7 +131,7 @@ int WebsocketClient::run()
 {
   if (!client.connected())
   {
-    Serial.println("Disconnected...");
+//    Serial.println("Disconnected...");
   }
   if (client.available() > 0)
   {

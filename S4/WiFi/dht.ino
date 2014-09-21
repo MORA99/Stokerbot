@@ -18,21 +18,25 @@ int8_t dht_getdata(unsigned char pin, short *temperature, short *humidity) {
 	uint8_t i,j = 0;
 
 	memset(bits, 0, sizeof(bits));
-
+/*
 	//reset port
 	pinMode(pin, OUTPUT);
 	digitalWrite(pin, HIGH);
 	delay(100);
-
+*/
 	//send request
+
+	pinMode(pin, OUTPUT);
 	digitalWrite(pin, LOW);
 	#if DHT_TYPE == DHT_DHT11
 	delay(18);
 	#elif DHT_TYPE == DHT_DHT22
 	delayMicroseconds(500);
 	#endif
-	digitalWrite(pin, HIGH);
+
 	pinMode(pin, INPUT);
+	digitalWrite(pin, HIGH);
+
 	delayMicroseconds(40);
 
 	//check start condition 1
@@ -44,7 +48,7 @@ int8_t dht_getdata(unsigned char pin, short *temperature, short *humidity) {
 	if(digitalRead(pin)==LOW) {
 		return -2;
 	}
-	delayMicroseconds(80);
+	delayMicroseconds(40);
 
 	//read the data
 	uint16_t timeoutcounter = 0;
@@ -58,7 +62,7 @@ int8_t dht_getdata(unsigned char pin, short *temperature, short *humidity) {
 					return -3; //timeout
 				}
 			}
-			delayMicroseconds(30);
+			delayMicroseconds(45);
 			if(digitalRead(pin)==HIGH) //if input is high after 30 us, get result
 				result |= (1<<(7-i));
 			timeoutcounter = 0;
@@ -73,11 +77,19 @@ int8_t dht_getdata(unsigned char pin, short *temperature, short *humidity) {
 	}
 
 	//reset port
-	pinMode(pin, OUTPUT);
-	digitalWrite(pin, LOW);
-	delay(100);
+	pinMode(pin, INPUT);
 
 	//check checksum
+Serial.println(bits[0],BIN);
+Serial.println(bits[1],BIN);
+Serial.println(bits[2],BIN);
+Serial.println(bits[3],BIN);
+Serial.println(bits[4],BIN);
+Serial.println(bits[0]+bits[1]+bits[2]+bits[3],BIN);
+
+		*humidity = bits[0]<<8 | bits[1];
+		*temperature = bits[2]<<8 | bits[3];
+
 	if ((uint8_t)(bits[0] + bits[1] + bits[2] + bits[3]) == bits[4]) {
 		//return temperature and humidity
 		*humidity = bits[0]<<8 | bits[1];

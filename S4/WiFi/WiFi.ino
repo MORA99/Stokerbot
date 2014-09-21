@@ -59,7 +59,7 @@ void setup() {
   //randomSeed(analogRead(14));
 
   accelerometer.begin();
-  wsc.connect();
+//  wsc.connect();
 
 // tasks.scheduleFunction(exports, "exports", 0, 5000);
 // tasks.scheduleFunction(test, "test", 0, 100);
@@ -70,14 +70,25 @@ void setup() {
   if (! tmp006.begin()) {
     Serial.println("No sensor found");
   }  
-
+  
+  while(1) {
+  unsigned long i = micros();
+  delayMicroseconds(100);
+  unsigned long p = micros();  
+  unsigned long o = p-i;
+  Serial.print("Tooki : ");  Serial.println(i);
+  Serial.print("Tookp : ");  Serial.println(p);
+  Serial.print("Tooko : ");  Serial.println(o);  
+  }
+  
+/*
   int16_t rawhumidity;
   int16_t rawtemperature;
-  int8_t res = dht_getdata(29, &rawtemperature, &rawhumidity);
+  int8_t res = dht_getdata(2, &rawtemperature, &rawhumidity);
   Serial.print("Res:");Serial.println(res);
   Serial.print("Temp:");Serial.println(rawtemperature);
   Serial.print("Hum:");Serial.println(rawhumidity);  
-
+*/
 }
 
 int temp(unsigned long now)
