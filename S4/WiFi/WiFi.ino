@@ -77,7 +77,7 @@ void setup() {
 
   int16_t rawhumidity;
   int16_t rawtemperature;
-  int8_t res = dht_getdata(2, &rawtemperature, &rawhumidity);
+  int8_t res = dht_getrawdata(2, &rawtemperature, &rawhumidity, true);
   Serial.print("Res:");Serial.println(res);
   Serial.print("Temp:");Serial.println(rawtemperature);
   Serial.print("Hum:");Serial.println(rawhumidity);  

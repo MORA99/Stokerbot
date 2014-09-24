@@ -1,43 +1,21 @@
 #include "Energia.h"
 #include "dht.h"
 
-/*
-DHT Library 0x03
-
-copyright (c) Davide Gironi, 2012
-
-Released under GPLv3.
-Please refer to LICENSE file for licensing information.
-*/
-
-/*
- * get data from sensor
- */
-int8_t dht_getdata(unsigned char pin, short *temperature, short *humidity) {
-pinMode(3, OUTPUT);
+int8_t dht_getrawdata(unsigned char pin, short *temperature, short *humidity, boolean dht22) {
 	uint8_t bits[5];
 	uint8_t i,j = 0;
 
 	memset(bits, 0, sizeof(bits));
-/*
-	//reset port
-	pinMode(pin, OUTPUT);
-	digitalWrite(pin, HIGH);
-	delay(100);
-*/
-	//send request
 
 	pinMode(pin, OUTPUT);
 	digitalWrite(pin, LOW);
-	#if DHT_TYPE == DHT_DHT11
-	delay(18);
-	#elif DHT_TYPE == DHT_DHT22
-	delayMicroseconds(500);
-	#endif
+	if (dht22)
+	  delayMicroseconds(500);
+        else
+  	  delay(18);
 
 	pinMode(pin, INPUT);
 	digitalWrite(pin, HIGH);
-
 	delayMicroseconds(40);
 
 	//check start condition 1
@@ -49,7 +27,6 @@ pinMode(3, OUTPUT);
 	if(digitalRead(pin)==LOW) {
 		return -2;
 	}
-//	delayMicroseconds(40);
 
       //Sensor init ok, now read 5 bytes ...
       for (j=0; j<5; j++)
@@ -62,28 +39,42 @@ pinMode(3, OUTPUT);
       }
       
 	//reset port
-	pinMode(pin, INPUT);
-
-	//check checksum
-        Serial.println(bits[0],BIN);
-        Serial.println(bits[1],BIN);
-        Serial.println(bits[2],BIN);
-        Serial.println(bits[3],BIN);
-        Serial.println(bits[4],BIN);
-        Serial.println(bits[0]+bits[1]+bits[2]+bits[3],BIN);
-
-        Serial.print(bits[0]);Serial.print(" ");        
-        Serial.print(bits[1]);Serial.print(" ");        
-        Serial.print(bits[2]);Serial.print(" ");        
-        Serial.print(bits[3]);Serial.println("");                
+	pinMode(pin, INPUT);        
 
 	if ((uint8_t)(bits[0] + bits[1] + bits[2] + bits[3]) == bits[4]) {
 		//return temperature and humidity
-		*humidity = bits[0]<<8 | bits[1];
-		*temperature = bits[2]<<8 | bits[3];
+                if (dht22) {
+		  *humidity = bits[0]<<8 | bits[1];
+                  *temperature = bits[2]<<8 | bits[3];
+                } else {
+		  *humidity = bits[0];
+                  *temperature = bits[2];
+                }
 		return 0;
 	}
 
 	return -5;
+}
+
+int8_t dht_getfloatdata(unsigned char pin, float *temperature, float *humidity, boolean dht22)
+{
+  short rawtemperature, rawhumidity;
+  int8_t res = dht_getrawdata(pin, &rawtemperature, &rawhumidity, dht22);
+  if (res != 0)
+  {
+    return res;
+  }
+  if (dht22) {
+  if(rawtemperature & 0x8000) {
+    *temperature = (float)((rawtemperature & 0x7FFF) / 10.0) * -1.0;
+  } else {
+    *temperature = (float)rawtemperature/10.0;
+  }
+  *humidity = (float)rawhumidity/10.0;  
+  } else {
+    *temperature = (float)rawtemperature;
+    *humidity = (float)rawhumidity;
+  }
+  return 0;
 }
 
