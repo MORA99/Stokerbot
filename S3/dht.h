@@ -14,7 +14,14 @@ References:
 #ifndef DHT_H_
 #define DHT_H_
 
-#include "Energia.h"
+#include <stdio.h>
+#include <avr/io.h>
+#include <stdbool.h>
+
+//setup port
+#define DHT_DDR DDRC
+#define DHT_PORT PORTC
+#define DHT_PIN PINC
 
 //sensor type
 #define DHT_DHT11 1
@@ -29,9 +36,9 @@ References:
 #define DHT_FLOAT 1
 #endif
 
-#define DHT_TIMEOUT 250000
+//timeout retries
+#define DHT_TIMEOUT 200
 
-int8_t dht_getdata(unsigned char pin, short *temperature, short *humidity);
+extern int8_t dht_getdata(uint8_t pin, int16_t *temperature, int16_t *humidity, bool dht22);
 
 #endif
-

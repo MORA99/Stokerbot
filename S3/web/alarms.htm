@@ -1,0 +1,12 @@
+<SCRIPT SRC='/loader.js'></SCRIPT>
+<script>
+menu(2,1);
+
+dw('<table border=1>');
+dw('<thead><tr><td>Source</td><td>Type</td><td>Value</td><td>Output</td><td>Output state</td><td>Reverse</td><td>Enable</td></tr></thead>');
+for (var alarm=1; alarm<=8; alarm++)
+	showAlarm(alarm);
+
+dw('</table>');
+
+</script>

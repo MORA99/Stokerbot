@@ -1,0 +1,195 @@
+body  {
+  background: #E9F2F6;
+  margin: 0;
+  text-align: center;  /* MSIE 5 doesn't center based on auto left/right margins,
+                          but 'text-align:center' does center top-level divs: */
+  min-width: 1000px;      /* Specify a min-width for the body as wide as the 'wrapper'
+                           element itself. This prevents negative (i.e. inaccessible)
+                           left-margins in narrow browser windows when using
+                           Navigator 6+/Mozilla on Win32: */
+}
+
+#container {
+  text-align: left;    /* Reset alignment to compensate for 'text-align:center': */
+  width: 1000px;        /* Specify the width of the element. This should be the same
+                          as 'body min-width': */
+  margin-left: auto;   /* Set left and right margins to auto, thus centering the
+                          element in the containing (body) tag: */
+  margin-right: auto;
+}
+
+#header { 
+    padding: 35px 30px 5px 30px;
+    background: #3b7687;
+    height: 100px;
+    color: #FFFFFF;
+    text-decoration: none;
+    font-size: 30px;
+    font-family: "Myriad Pro";
+} 
+
+#header a {
+    color: #FFFFFF;
+    text-decoration: none;
+    font-size: 18px;
+    font-family: "Myriad Pro";
+}
+
+#menu1 {
+    background-color: #3b7687;
+    padding: 6px 30px 6px 0;
+    float: left;
+}
+
+#menu1 a {
+    color: #c5d6db;
+    text-decoration: none;
+    font-size: 14px;
+    font-family: "Myriad Pro";
+}
+
+#menu1 a:hover {
+    color: #ecf2f3;
+}
+
+#menu2 {
+    background-color: #3b7687;
+    padding: 6px 30px 6px 0;
+    float: left;
+}
+
+#menu2 a {
+    color: #c5d6db;
+    text-decoration: none;
+    font-size: 14px;
+    font-family: "Myriad Pro";
+}
+
+#menu2 a:hover {
+    color: #ecf2f3;
+}
+
+#imagebox {
+    background-color: #3b7687;
+    padding: 6px 30px 6px 0;
+    float: left;
+}
+
+
+.project {
+    margin:15px 0 25px 0;
+}
+
+h1 {
+    margin: 0px;
+    color: #869843;
+    font-size:24px;
+    font-family: "Arial Narrow";
+    font-weight: normal;
+}
+
+h2 {
+    color: #3b7687;
+    font-size: 15px;
+    margin: 20px 0 5px 0;
+}
+
+h3 {
+    color: #3b7687;
+    font-size: 12px;
+    margin: 0px 0 0px 0;
+}
+
+#main {
+    background-color: #FFFFFF;
+} 
+
+#text { 
+    margin: 0 0 0 0px;
+    padding: 25px 20px 25px 20px;
+    color: #444444;
+    font-family: "Georgia";
+    font-size: 13px;
+    line-height: 18px;
+    text-align: justify;
+} 
+
+#text a {
+    color: #3b7687;
+    text-decoration: none;
+}
+
+a {
+    color: #444444;
+    text-decoration: none;
+}
+
+.biglink {
+    color: #3b7687;
+    text-decoration: none;
+    font-size: 14pt;
+}
+
+#text a:hover {
+    color: #444444;
+}
+
+#footer {
+    padding: 6px 30px 6px 30px;
+    background: #d6d6d6;
+    font-family: "Lucida Sans Unicode";
+    color: #444444;
+    font-size: 11px;
+    text-align: right;
+}
+
+#footer a {
+    text-decoration: none;
+    color: #262626;
+}
+
+#footer a:hover {
+    color: #666666;
+}
+
+.separator {
+    font-size:11px;
+    color:#FFFFFF;
+}
+
+.clear {
+    clear:both;
+}
+
+fieldset
+{
+    border: 1px solid #3b7687;
+}
+
+legend
+{
+    color: #c5d6db;
+    background: #3b7687;
+    border: 1px solid #781351;
+    padding: 2px 6px
+}
+
+.infobox
+{
+    color: #c5d6db;
+    background: #3b7687;
+    border: 1px solid #781351;
+    padding: 2px 6px
+}
+
+thead
+{
+    color:#3b7687;
+    font-size:15px;
+}
+
+tfoot
+{
+    color:#3b7687;
+}
+
