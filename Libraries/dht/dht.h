@@ -12,8 +12,8 @@
 class dht
 {
   public:
-  static int8_t getRawData(unsigned char pin, int16_t *temperature, int16_t *humidity, boolean dht22);
-  static int8_t getFloatData(unsigned char pin, float *temperature, float *humidity, boolean dht22);
+  static int8_t readRawData(unsigned char pin, int16_t *temperature, int16_t *humidity, boolean dht22);
+  static int8_t readFloatData(unsigned char pin, float *temperature, float *humidity, boolean dht22);
   static float convertTemperature(int16_t temperaure);
   static float convertHumidity(int16_t humidity);  
 };

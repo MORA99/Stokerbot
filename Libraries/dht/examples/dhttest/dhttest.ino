@@ -11,7 +11,7 @@ void loop()
  
  //Being a timed single wire protocol, errors do happen.
  //But by comparing the result of getData to 0 you can discard bad reads using the CRC system.
-  if (dht::getFloatData(2, &temperature, &humidity, true) == 0)
+  if (dht::readFloatData(2, &temperature, &humidity, true) == 0)
   {
     Serial.print("T: ");
     Serial.print(temperature);
@@ -25,7 +25,7 @@ void loop()
   //or if you need to store the values before transmitting.
   
   int16_t rawtemperature, rawhumidity;
-  if (dht::getRawData(2, &rawtemperature, &rawhumidity, true) == 0)
+  if (dht::readRawData(2, &rawtemperature, &rawhumidity, true) == 0)
   {
     Serial.print("(raw) T: ");
     Serial.print(rawtemperature);

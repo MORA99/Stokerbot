@@ -1,4 +1,4 @@
-getRawData	KEYWORD2
-getFloatData	KEYWORD2
+readRawData	KEYWORD2
+readFloatData	KEYWORD2
 convertTemperature	KEYWORD2
 convertHumidity	KEYWORD2

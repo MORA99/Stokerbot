@@ -6,7 +6,7 @@
 
 #include "dht.h"
 
-int8_t dht::getRawData(unsigned char pin, int16_t *temperature, int16_t *humidity, boolean dht22) {
+int8_t dht::readRawData(unsigned char pin, int16_t *temperature, int16_t *humidity, boolean dht22) {
 	uint8_t bits[5];
 	uint8_t i,j = 0;
 
@@ -61,10 +61,10 @@ int8_t dht::getRawData(unsigned char pin, int16_t *temperature, int16_t *humidit
 	return -5;
 }
 
-int8_t dht::getFloatData(unsigned char pin, float *temperature, float *humidity, boolean dht22)
+int8_t dht::readFloatData(unsigned char pin, float *temperature, float *humidity, boolean dht22)
 {
   int16_t rawtemperature, rawhumidity;
-  int8_t res = dht::getRawData(pin, &rawtemperature, &rawhumidity, dht22);
+  int8_t res = dht::readRawData(pin, &rawtemperature, &rawhumidity, dht22);
   if (res != 0)
   {
     return res;
