@@ -1,3 +1,9 @@
+/*
+Both readFloatData and readRawData takes 2 pointers as arguments.
+That means you need to have these variables locally already and then prefix them with a &.
+The result of the function will be put into those variables if successful, and you can use the return value of the function to test for errors.
+*/
+
 #include <dht.h>
 
 void setup()
@@ -20,7 +26,8 @@ void loop()
   }  
   
   
-  delay(5000);  
+  delay(5000);  //dht sensors are pretty slow, they generally dont respond more than 1 time every 2 seconds
+  
   //This way is mostly useful if you dont want to load float support
   //or if you need to store the values before transmitting.
   
