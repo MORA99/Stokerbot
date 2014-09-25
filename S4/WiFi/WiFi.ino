@@ -65,35 +65,12 @@ void setup() {
 // tasks.scheduleFunction(test, "test", 0, 100);
 //   tasks.scheduleFunction(accel, "accel", 0, 1000);
    tasks.scheduleFunction(second, "WSrun", 0, 1000);
+   tasks.scheduleFunction(dht, "dht", 0, 5000);   
 //   tasks.scheduleFunction(temp, "temp", 0, 1000);
     
   if (! tmp006.begin()) {
     Serial.println("No sensor found");
   }  
-  
- 
-//S3S CRC OK 1 164 1 28
-
-
-  int16_t rawhumidity;
-  int16_t rawtemperature;
-  int8_t res = dht_getrawdata(2, &rawtemperature, &rawhumidity, true);
-  Serial.print("Res:");Serial.println(res);
-  Serial.print("Temp:");Serial.println(rawtemperature);
-  Serial.print("Hum:");Serial.println(rawhumidity);  
- 
-  float temperature, humidity;
-  
-  if(rawtemperature & 0x8000) {
-    temperature = (float)((rawtemperature & 0x7FFF) / 10.0) * -1.0;
-  } else {
-    temperature = (float)rawtemperature/10.0;
-  }
-  humidity = (float)rawhumidity/10.0;
-
-Serial.print("T:");Serial.println(temperature);
-Serial.print("H:");Serial.println(humidity);
-
 }
 
 int temp(unsigned long now)
@@ -226,3 +203,14 @@ int second(long unsigned int now)
  wsc.run();
 }
 
+int dht(long unsigned int now)
+{
+  float humidity;
+  float temperature;
+  int8_t res = dht::getFloatData(2, &temperature, &humidity, true);
+  Serial.print("Res:");Serial.println(res);
+  if (res == 0) {
+    Serial.print("T:");Serial.println(temperature);
+    Serial.print("H:");Serial.println(humidity);  
+  }
+}

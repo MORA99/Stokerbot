@@ -1,0 +1,4 @@
+getRawData	KEYWORD2
+getFloatData	KEYWORD2
+convertTemperature	KEYWORD2
+convertHumidity	KEYWORD2
