@@ -6,17 +6,21 @@ WebsocketClient::WebsocketClient(char* host, uint16_t port, char* path)
   _host = host;
   _port = port;
   _path = path;
+  _connected = false;
+  _connectionTimer = 100;
 }
 
 void WebsocketClient::connect() {
   char key[16];
   for (uint8_t i=0; i<16; i++)  key[i]=random(0,255);//Must be randomized for each connection
   base64_encode(_key, key, 16); 
-  Serial.println(_key);
   char* protocol = "chat";
+  
+  Serial.print("Connecting to ");Serial.println(_host);
   
   if (client.connect(_host, _port)) {
     Serial.println("Connected");
+    _connected = true;
   } else {
     Serial.println("Connection failed.");
     return;
@@ -74,7 +78,6 @@ while (!headerEndFound)
     line[i++] = c;
     if (c=='\r')
     {
-      Serial.println(i);
       client.read(); // \n
       lineEndFound=true;
       if (i == 1)
@@ -84,8 +87,6 @@ while (!headerEndFound)
     }
   }
   line[i] = NULL;
-  Serial.print("Line : ");
-  Serial.println(line);  
   char* acceptKey = strstr(line, "Sec-WebSocket-Accept");
   if (acceptKey != NULL)
   {
@@ -126,6 +127,22 @@ Sec-WebSocket-Accept: fWDprEwtL2ZZ4DcUCCkymXFwZQM=
 Server: Kaazing Gateway
 Date: Thu, 18 Sep 2014 15:38:26 GMT
 */
+
+
+
+
+    char* reg = "{\"cmd\":\"identify\", \"data\":\"CC3200\"}";
+    sendMessage(reg, strlen(reg));
+}
+
+void WebsocketClient::connectRetry()
+{
+  if (_connectionTimer-- == 0)
+  {
+    Serial.println("Starting reconnect");
+    connect();
+    _connectionTimer = 100;
+  }
 }
 
 int WebsocketClient::run()
@@ -133,6 +150,8 @@ int WebsocketClient::run()
   if (!client.connected())
   {
 //    Serial.println("Disconnected...");
+      _connected = false;
+      connectRetry();
   }
   if (client.available() > 0)
   {

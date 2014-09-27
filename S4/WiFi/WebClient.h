@@ -13,9 +13,13 @@ class WebsocketClient
   uint16_t _port;
   char* _host;
   char* _path;
-  boolean sendPong();
   char _key[25];
+  boolean _connected;
+  uint8_t _connectionTimer;
   
+  boolean sendPong();
+  void connectRetry();
+
   public:
   WebsocketClient(char* host, uint16_t port, char* path);
   void connect();

@@ -1,4 +1,6 @@
+#include "Energia.h"
 #include "config.h"
+
 #include <SPI.h>
 #include <WiFi.h>
 #include <WiFiClient.h>
@@ -12,6 +14,7 @@
 #include "Queue.h"
 #include "WebClient.h"
 #include "dht.h"
+#include "sensors.h"
 
 using namespace ArduinoJson;
 
@@ -20,6 +23,7 @@ BMA222 accelerometer;
 Adafruit_TMP006 tmp006(0x41);
 //WebsocketClient wsc("echo.websocket.org", 80, "/");
 WebsocketClient wsc("iotpool.com", 4000, "/");
+Sensors sensors;
 
 
 WiFiServer server(80);
@@ -61,36 +65,21 @@ void setup() {
 
   accelerometer.begin();
   wsc.connect();
+  tmp006.begin();
 
-// tasks.scheduleFunction(exports, "exports", 0, 5000);
-// tasks.scheduleFunction(test, "test", 0, 100);
-   tasks.scheduleFunction(second, "WSrun", 0, 1000);
+  tasks.scheduleFunction(exportSlow, "ES", 60000, 60000);
+  tasks.scheduleFunction(sensorTick, "ST", 250, 250);
+  tasks.scheduleFunction(second, "Second", 0, 1000);
 
-   tasks.scheduleFunction(accel, "accel", 5000, 100);
-   tasks.scheduleFunction(dht, "dht", 5000, 2000);   
-   tasks.scheduleFunction(temp, "temp", 5000, 500);
-    
-  if (! tmp006.begin()) {
-    Serial.println("No sensor found");
-  }  
+  tasks.scheduleFunction(accel, "accel", 1000, 1000);
+  tasks.scheduleFunction(dht, "dht", 5000, 5000);   
+  tasks.scheduleFunction(temp, "temp", 5000, 2000);
 }
 
 int temp(unsigned long now)
 {
-  //tmp006.wake();
-  float objt = tmp006.readObjTempC();
-  Serial.print("Object Temperature: "); Serial.print(objt); Serial.println("*C");
-  float diet = tmp006.readDieTempC();
-  Serial.print("Die Temperature: "); Serial.print(diet); Serial.println("*C");    
-  
-  Generator::JsonObject<4> root; 
-  root["id"] = "CC3200";
-  root["TMP006.TO"] = objt;
-  root["TMP006.TD"] = diet;
-  char buffer[100];
-  memset(buffer, NULL, sizeof(buffer));
-  root.printTo(buffer, sizeof(buffer));  
-  wsc.sendMessage(buffer, sizeof(buffer));      
+  sensors.add("TMP006-O", tmp006.readObjTempC());
+  sensors.add("TMP006-D", tmp006.readDieTempC());  
 }
 
 void loop() {
@@ -164,7 +153,6 @@ void loop() {
   }
   
   tasks.Run(millis());
- 
 }
 
 
@@ -185,33 +173,78 @@ void printWifiStatus() {
   Serial.println(" dBm");
 }
 
-int exports(long unsigned int now)
+int exportSlow(long unsigned int now)
 {
-  sendReport();  
+  exports(true);
 }
 
-int test(long unsigned int now)
+void exports(boolean all)
 {
-  PubNubRun();
+   uint8_t next = sensors.getNextSpot();
+   uint16_t current = sensors.getCurrentTick();
+   uint8_t limit = 0;
+   uint16_t diff;
+     
+   for (uint8_t i=0; i<next; i++)
+   {
+     sensor s = sensors.getSensor(i);
+     if (strlen(s.name) > 0)
+     {
+       /*
+       Serial.print("Sensor #");Serial.println(i);
+       Serial.print("Name: ");Serial.println(s.name);     
+       Serial.print("Value: ");Serial.println(s.value);     
+       Serial.print("Update: ");Serial.println(s.lastUpdate);
+       */
+       if (all) //Send all sensors that were updated in the last 60 ticks
+       {
+         diff = current - s.lastUpdate;
+         if (current < s.lastUpdate) diff = (65535 - s.lastUpdate) + current; //Rollover
+         limit = 60;
+       } else { //Send all sensors that were CHANGED in the last 2 ticks
+         diff = current - s.lastChange;
+         if (current < s.lastChange) diff = (65535 - s.lastChange) + current; //Rollover
+       }
+       
+       if (diff <= limit)
+       {
+         //{"cmd":"data","data":[{s.name: s.value}]}
+         char buffer[100];
+         Generator::JsonObject<4> root; 
+         
+         Generator::JsonObject<2> sensorObj;
+         sensorObj[s.name] = s.value;
+         
+         Generator::JsonArray<1> data;
+         data.add(sensorObj);
+         
+         root["cmd"] = "data";
+         root["data"] = data;
+         root.printTo(buffer, sizeof(buffer));           
+
+          wsc.sendMessage(buffer, strlen(buffer));
+       }
+     }
+   }
 }
 
 int accel(long unsigned int now)
 {
-  Generator::JsonObject<4> root; 
-  root["id"] = "CC3200";
-  root["accel.x"] = accelerometer.readXData();
-  root["accel.y"] = accelerometer.readYData();
-  root["accel.z"] = accelerometer.readZData();
-  char buffer[100];
-  memset(buffer, NULL, sizeof(buffer));
-  root.printTo(buffer, sizeof(buffer));  
-//  PubNubPub(buffer); 
-  wsc.sendMessage(buffer, sizeof(buffer));
+  sensors.add("Accel.x", accelerometer.readXData());
+  sensors.add("Accel.y", accelerometer.readYData());
+  sensors.add("Accel.z", accelerometer.readZData());  
 }
 
 int second(long unsigned int now)
 {
  wsc.run();
+ sys();
+}
+
+int sensorTick(long unsigned int now)
+{
+ exports(false);
+ sensors.tick();  
 }
 
 int dht(long unsigned int now)
@@ -219,18 +252,13 @@ int dht(long unsigned int now)
   float humidity;
   float temperature;
   int8_t res = dht::readFloatData(2, &temperature, &humidity, true);
-  Serial.print("Res:");Serial.println(res);
   if (res == 0) {
-    Serial.print("T:");Serial.println(temperature);
-    Serial.print("H:");Serial.println(humidity);  
-    
-  Generator::JsonObject<4> root; 
-  root["id"] = "CC3200";
-  root["DHT22.T"] = temperature;
-  root["DHT22.H"] = humidity;
-  char buffer[100];
-  memset(buffer, NULL, sizeof(buffer));
-  root.printTo(buffer, sizeof(buffer));  
-  wsc.sendMessage(buffer, sizeof(buffer));    
+    sensors.add("D0H", humidity);  
+    sensors.add("D0T", temperature);    
   }
+}
+
+int sys()
+{
+  sensors.add("RSSI", WiFi.RSSI());
 }
