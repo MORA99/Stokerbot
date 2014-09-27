@@ -105,17 +105,18 @@ Finally, the resulting reply occurs in the header Sec-WebSocket-Accept.
   }
 }
 
-
+/*
 while (client.available())
 {
  char c = client.read();
  Serial.print(c); 
 }
+*/
 Serial.println("Handshake untested ..., websocket from here on out...");
 
-sendMessage("hello",5);
-sendPing();
-sendPong(); //Pong can be sent at anytime, theres no reply
+//sendMessage("hello",5);
+//sendPing();
+//sendPong(); //Pong can be sent at anytime, theres no reply
 
 /*
 HTTP/1.1 101 Web Socket Protocol Handshake

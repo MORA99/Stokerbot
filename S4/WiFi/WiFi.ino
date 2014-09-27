@@ -18,7 +18,8 @@ using namespace ArduinoJson;
 Queue tasks;
 BMA222 accelerometer;
 Adafruit_TMP006 tmp006(0x41);
-WebsocketClient wsc("echo.websocket.org", 80, "/");
+//WebsocketClient wsc("echo.websocket.org", 80, "/");
+WebsocketClient wsc("iotpool.com", 4000, "/");
 
 
 WiFiServer server(80);
@@ -59,14 +60,15 @@ void setup() {
   //randomSeed(analogRead(14));
 
   accelerometer.begin();
-//  wsc.connect();
+  wsc.connect();
 
 // tasks.scheduleFunction(exports, "exports", 0, 5000);
 // tasks.scheduleFunction(test, "test", 0, 100);
-//   tasks.scheduleFunction(accel, "accel", 0, 1000);
    tasks.scheduleFunction(second, "WSrun", 0, 1000);
-   tasks.scheduleFunction(dht, "dht", 0, 5000);   
-//   tasks.scheduleFunction(temp, "temp", 0, 1000);
+
+   tasks.scheduleFunction(accel, "accel", 5000, 100);
+   tasks.scheduleFunction(dht, "dht", 5000, 2000);   
+   tasks.scheduleFunction(temp, "temp", 5000, 500);
     
   if (! tmp006.begin()) {
     Serial.println("No sensor found");
@@ -80,6 +82,15 @@ int temp(unsigned long now)
   Serial.print("Object Temperature: "); Serial.print(objt); Serial.println("*C");
   float diet = tmp006.readDieTempC();
   Serial.print("Die Temperature: "); Serial.print(diet); Serial.println("*C");    
+  
+  Generator::JsonObject<4> root; 
+  root["id"] = "CC3200";
+  root["TMP006.TO"] = objt;
+  root["TMP006.TD"] = diet;
+  char buffer[100];
+  memset(buffer, NULL, sizeof(buffer));
+  root.printTo(buffer, sizeof(buffer));  
+  wsc.sendMessage(buffer, sizeof(buffer));      
 }
 
 void loop() {
@@ -188,14 +199,14 @@ int accel(long unsigned int now)
 {
   Generator::JsonObject<4> root; 
   root["id"] = "CC3200";
-  root["x"] = accelerometer.readXData();
-  root["y"] = accelerometer.readYData();
-  root["z"] = accelerometer.readZData();
+  root["accel.x"] = accelerometer.readXData();
+  root["accel.y"] = accelerometer.readYData();
+  root["accel.z"] = accelerometer.readZData();
   char buffer[100];
   memset(buffer, NULL, sizeof(buffer));
   root.printTo(buffer, sizeof(buffer));  
 //  PubNubPub(buffer); 
-  sendMessage(buffer);
+  wsc.sendMessage(buffer, sizeof(buffer));
 }
 
 int second(long unsigned int now)
@@ -207,10 +218,19 @@ int dht(long unsigned int now)
 {
   float humidity;
   float temperature;
-  int8_t res = dht::getFloatData(2, &temperature, &humidity, true);
+  int8_t res = dht::readFloatData(2, &temperature, &humidity, true);
   Serial.print("Res:");Serial.println(res);
   if (res == 0) {
     Serial.print("T:");Serial.println(temperature);
     Serial.print("H:");Serial.println(humidity);  
+    
+  Generator::JsonObject<4> root; 
+  root["id"] = "CC3200";
+  root["DHT22.T"] = temperature;
+  root["DHT22.H"] = humidity;
+  char buffer[100];
+  memset(buffer, NULL, sizeof(buffer));
+  root.printTo(buffer, sizeof(buffer));  
+  wsc.sendMessage(buffer, sizeof(buffer));    
   }
 }
