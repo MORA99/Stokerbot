@@ -1,0 +1,69 @@
+#######################################
+
+# Syntax Coloring Map For OneWire
+
+#######################################
+
+
+
+
+#######################################
+
+# Datatypes (KEYWORD1)
+
+#######################################
+
+
+
+StellarisDS18B20		KEYWORD1
+
+
+
+#######################################
+
+# Methods and Functions (KEYWORD2)
+
+#######################################
+
+
+reset		KEYWORD2
+
+getdata		KEYWORD2
+readds1820	KEYWORD2
+write_bit	KEYWORD
+
+read_bit	KEYWORD2
+
+write		KEYWORD2
+
+read		KEYWORD2
+
+select		KEYWORD2
+
+skip		KEYWORD2
+
+depower		KEYWORD2
+
+reset_search	KEYWORD2
+
+search		KEYWORD2
+
+crc8		KEYWORD2
+
+crc16		KEYWORD2
+
+
+#######################################
+
+# Instances (KEYWORD2)
+
+#######################################
+
+
+
+
+#######################################
+
+# Constants (LITERAL1)
+
+#######################################

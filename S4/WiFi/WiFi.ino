@@ -10,6 +10,7 @@
 #include <Wire.h>
 #include <BMA222.h>
 #include <Adafruit_TMP006.h>
+#include <StellarisDS18B20.h>
 
 #include "Queue.h"
 #include "WebClient.h"
@@ -25,6 +26,7 @@ Adafruit_TMP006 tmp006(0x41);
 WebsocketClient wsc("iotpool.com", 4000, "/");
 Sensors sensors;
 
+DS18B20 ds(3);
 
 WiFiServer server(80);
 
@@ -222,7 +224,10 @@ void exports(boolean all)
          root["data"] = data;
          root.printTo(buffer, sizeof(buffer));           
 
-          wsc.sendMessage(buffer, strlen(buffer));
+         wsc.sendMessage(buffer, strlen(buffer));
+         
+//         sprintf(buffer, "{\"cmd\":\"data\",\"data\":[{\"%s\": \"%f\"}]}", s.name, s.value);
+//         Serial.println(buffer);
        }
      }
    }
@@ -239,6 +244,7 @@ int second(long unsigned int now)
 {
  wsc.run();
  sys();
+ readOW();
 }
 
 int sensorTick(long unsigned int now)
@@ -262,3 +268,23 @@ int sys()
 {
   sensors.add("RSSI", WiFi.RSSI());
 }
+
+boolean dsconv = false;
+void readOW() {
+  if (!dsconv)
+  {
+      ds.CmdT();
+      dsconv=true;
+  } else {
+    dsconv=false;
+    byte rom[8];
+    char buffer[20];
+    while (ds.search(rom)) {
+      float temp = (float)ds.GetTemperature(rom) / 100;    
+      sprintf(buffer, "%02X%02X%02X%02X%02X%02X%02X%02X", rom[0],rom[1],rom[2],rom[3],rom[4],rom[5],rom[6],rom[7]);
+      sensors.add(buffer, temp);
+    }
+    ds.reset_search();
+  }
+}
+
