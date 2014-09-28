@@ -1,5 +1,7 @@
 #include "WebClient.h"
 #include "Base64.h"
+#include "sha1.h"
+
 
 WebsocketClient::WebsocketClient(char* host, uint16_t port, char* path)
 {
@@ -8,6 +10,15 @@ WebsocketClient::WebsocketClient(char* host, uint16_t port, char* path)
   _path = path;
   _connected = false;
   _connectionTimer = 100;
+}
+
+void printHash(uint8_t* hash) {
+  int i;
+  for (i=0; i<20; i++) {
+    Serial.print("0123456789abcdef"[hash[i]>>4]);
+    Serial.print("0123456789abcdef"[hash[i]&0xf]);
+  }
+  Serial.println();
 }
 
 void WebsocketClient::connect() {
@@ -46,6 +57,7 @@ void WebsocketClient::connect() {
 //Find Sec-WebSocket-Accept and validate it
 //Then find \r\n\r\n that ends the HTTP header
 
+boolean handshake = false;
 boolean headerEndFound = false;
 char line[100];
   
@@ -90,30 +102,45 @@ while (!headerEndFound)
   char* acceptKey = strstr(line, "Sec-WebSocket-Accept");
   if (acceptKey != NULL)
   {
-    Serial.print("Found sec key ");
+//    Serial.print("Found sec key ");
     acceptKey = strstr(line, ":");
     acceptKey+=2;
-    Serial.println(acceptKey);
+    acceptKey[strlen(acceptKey)-1] = NULL; //Remove trailing \r
+//    Serial.println(acceptKey);
     
-/*
-The client sends a Sec-WebSocket-Key which is a random value that has been base64 encoded. 
-To form a response, the GUID 258EAFA5-E914-47DA-95CA-C5AB0DC85B11 is appended to this base64 encoded key. 
-The base64 encoded key will not be decoded first.
-The resulting string is then hashed with SHA-1, then base64 encoded. 
-Finally, the resulting reply occurs in the header Sec-WebSocket-Accept.
-*/
+    /*
+    The client sends a Sec-WebSocket-Key which is a random value that has been base64 encoded. 
+    To form a response, the GUID 258EAFA5-E914-47DA-95CA-C5AB0DC85B11 is appended to this base64 encoded key. 
+    The base64 encoded key will not be decoded first.
+    The resulting string is then hashed with SHA-1, then base64 encoded. 
+    Finally, the resulting reply occurs in the header Sec-WebSocket-Accept.
+    */
 
+    Sha1.init();
+    Sha1.print(_key);
+    Sha1.print("258EAFA5-E914-47DA-95CA-C5AB0DC85B11");
+    char res[30];
+    char* ptr = (char*)Sha1.result();
+    base64_encode(res, ptr, 20);
+  
+    if (strcmp(res, acceptKey) == 0)
+    {
+      Serial.println("Handshake matches");
+      handshake = true;
+    } else {
+      Serial.print("Bad handshake : ");Serial.print(acceptKey);Serial.print(" != ");Serial.print(res);Serial.print(" ( ");Serial.print(strcmp(res, acceptKey));Serial.println(" ) ");
+      client.stop();
+      _connected=false;
+    }
   }
 }
 
-/*
-while (client.available())
+if (!handshake)
 {
- char c = client.read();
- Serial.print(c); 
+ Serial.println("No handshake ...");
+ _connected=false;
+ return;
 }
-*/
-Serial.println("Handshake untested ..., websocket from here on out...");
 
 //sendMessage("hello",5);
 //sendPing();
@@ -127,8 +154,6 @@ Sec-WebSocket-Accept: fWDprEwtL2ZZ4DcUCCkymXFwZQM=
 Server: Kaazing Gateway
 Date: Thu, 18 Sep 2014 15:38:26 GMT
 */
-
-
 
 
     char* reg = "{\"cmd\":\"identify\", \"data\":\"CC3200\"}";

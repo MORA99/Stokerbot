@@ -5,6 +5,8 @@
 #include <WiFiClient.h>
 //#include <EthernetClient>
 
+typedef int (*queuedFunction)(unsigned long);
+
 class WebsocketClient
 {
   private:

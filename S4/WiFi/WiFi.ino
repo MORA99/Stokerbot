@@ -227,7 +227,7 @@ void exports(boolean all)
          wsc.sendMessage(buffer, strlen(buffer));
          
 //         sprintf(buffer, "{\"cmd\":\"data\",\"data\":[{\"%s\": \"%f\"}]}", s.name, s.value);
-//         Serial.println(buffer);
+//          Serial.println(buffer);
        }
      }
    }
