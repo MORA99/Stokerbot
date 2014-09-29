@@ -1,0 +1,5 @@
+WebsocketClient	KEYWORD2
+connect()	KEYWORD2
+run()	KEYWORD2
+sendPing()	KEYWORD2
+sendMessage(char* msg, uint16_t length)	KEYWORD2

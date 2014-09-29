@@ -1,3 +1,16 @@
+/*
+  WebSocketClient demo for Energia platform
+  https://github.com/MORA99/Stokerbot/tree/master/Libraries/WebSocketClient
+  Released into the public domain - http://unlicense.org
+  
+  Note: This package includes Base64 and sha1 implementation that I did not write.
+  Base64 : https://github.com/adamvr/arduino-base64
+  Sha1 : Part of https://code.google.com/p/cryptosuite/
+  
+  Both are open licenses as of this writing, but you should check to make sure they are compatible with your project.
+  If not they can be replaced by other implementations.
+*/
+
 #ifndef WebsocketClient_h
 #define WebsocketClient_h
 

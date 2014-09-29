@@ -18,17 +18,30 @@
 #include "sensors.h"
 
 using namespace ArduinoJson;
+void test(char* msg);
 
 Queue tasks;
 BMA222 accelerometer;
 Adafruit_TMP006 tmp006(0x41);
 //WebsocketClient wsc("echo.websocket.org", 80, "/");
-WebsocketClient wsc("iotpool.com", 4000, "/");
+WebsocketClient wsc("iotpool.com", 4000, "/", test);
 Sensors sensors;
 
 DS18B20 ds(3);
 
 WiFiServer server(80);
+
+void test(char* msg)
+{
+  Serial.print("Got msg : ");
+  Serial.println(msg);
+  if (strcmp(msg, "{\"cmd\":\"identify\"}")==0)
+  {
+    Serial.println("IDENTIFY");
+    char* reg = "{\"cmd\":\"identify\", \"data\":\"CC3200\"}";
+    wsc.sendMessage(reg, strlen(reg));    
+  }
+}
 
 void setup() {
 
