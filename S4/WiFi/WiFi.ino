@@ -23,8 +23,9 @@ void test(char* msg);
 Queue tasks;
 BMA222 accelerometer;
 Adafruit_TMP006 tmp006(0x41);
-//WebsocketClient wsc("echo.websocket.org", 80, "/");
-WebsocketClient wsc("iotpool.com", 4000, "/", test);
+//WebsocketClient wsc("echo.websocket.org", 80, "/", false, test);
+//WebsocketClient wsc("echo.websocket.org", 443, "/", true, test);
+WebsocketClient wsc("iotpool.com", 4000, "/", true, test);
 Sensors sensors;
 
 DS18B20 ds(3);

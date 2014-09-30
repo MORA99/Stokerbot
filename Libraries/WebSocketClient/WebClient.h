@@ -30,6 +30,7 @@ class WebsocketClient
   char* _host;
   char* _path;
   char _key[25];
+  boolean _ssl;
   boolean _connected;
   uint8_t _connectionTimer;
   
@@ -37,7 +38,7 @@ class WebsocketClient
   void connectRetry();
 
   public:
-  WebsocketClient(char* host, uint16_t port, char* path, onMessage fnc);
+  WebsocketClient(char* host, uint16_t port, char* path, boolean ssl, onMessage fnc);
   void connect();
   int run();
   boolean sendPing();

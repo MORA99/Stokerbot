@@ -16,7 +16,7 @@
 #include "sha1.h"
 
 
-WebsocketClient::WebsocketClient(char* host, uint16_t port, char* path, onMessage fnc)
+WebsocketClient::WebsocketClient(char* host, uint16_t port, char* path, boolean ssl, onMessage fnc)
 {
   _host = host;
   _port = port;
@@ -24,6 +24,7 @@ WebsocketClient::WebsocketClient(char* host, uint16_t port, char* path, onMessag
   _connected = false;
   _connectionTimer = 100;
   _fnc = fnc;
+  _ssl = ssl;
 }
 
 void printHash(uint8_t* hash) {
@@ -42,8 +43,7 @@ void WebsocketClient::connect() {
   char* protocol = "chat";
   
   Serial.print("Connecting to ");Serial.println(_host);
-  
-  if (client.connect(_host, _port)) {
+  if ((_ssl && client.sslConnect(_host, _port)) || (!_ssl && client.connect(_host, _port))) {
     Serial.println("Connected");
     _connected = true;
   } else {
@@ -113,6 +113,7 @@ while (!headerEndFound)
     }
   }
   line[i] = NULL;
+  Serial.println(line);
   char* acceptKey = strstr(line, "Sec-WebSocket-Accept");
   if (acceptKey != NULL)
   {

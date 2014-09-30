@@ -15,7 +15,8 @@ int clientid = 0;
 
 
 void newMessage(char* msg); //This function will be called when the websocket gets new data
-WebsocketClient wsc("echo.websocket.org", 80, "/", newMessage); //Public loopback service
+WebsocketClient wsc("echo.websocket.org", 80, "/", false, newMessage); //Public loopback service
+WebsocketClient wsc("echo.websocket.org", 443, "/", true, newMessage); //Public loopback service SSL
 
 
 void newMessage(char* msg)
