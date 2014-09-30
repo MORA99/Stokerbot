@@ -18,21 +18,21 @@
 #include "sensors.h"
 
 using namespace ArduinoJson;
-void test(char* msg);
+void wscMessage(char* msg);
 
 Queue tasks;
 BMA222 accelerometer;
 Adafruit_TMP006 tmp006(0x41);
 //WebsocketClient wsc("echo.websocket.org", 80, "/", false, test);
 //WebsocketClient wsc("echo.websocket.org", 443, "/", true, test);
-WebsocketClient wsc("iotpool.com", 4000, "/", true, test);
+WebsocketClient wsc("iotpool.com", 4000, "/", true, wscMessage);
 Sensors sensors;
 
 DS18B20 ds(3);
 
 WiFiServer server(80);
 
-void test(char* msg)
+void wscMessage(char* msg)
 {
   Serial.print("Got msg : ");
   Serial.println(msg);
@@ -60,10 +60,10 @@ void setup() {
     Serial.print(".");
     delay(300);
   }
-  
+
   Serial.println("\nYou're connected to the network");
   Serial.println("Waiting for an ip address");
-  
+
   while (WiFi.localIP() == INADDR_NONE) {
     // print dots while we wait for an ip addresss
     Serial.print(".");
@@ -72,7 +72,7 @@ void setup() {
 
   // you're connected now, so print out the status  
   printWifiStatus();
-  
+
   Serial.println("Starting webserver on port 80");
   server.begin();                           // start the web server on port 80
   Serial.println("Webserver started!");
@@ -92,80 +92,8 @@ void setup() {
   tasks.scheduleFunction(temp, "temp", 5000, 2000);
 }
 
-int temp(unsigned long now)
-{
-  sensors.add("TMP006-O", tmp006.readObjTempC());
-  sensors.add("TMP006-D", tmp006.readDieTempC());  
-}
-
 void loop() {
-  // listen for incoming clients
-  WiFiClient client = server.available();
-  if (client) {
-    clientid++;
-    Serial.print("new client ");
-    Serial.println(clientid);
-    // an http request ends with a blank line
-    boolean currentLineIsBlank = true;
-    while (client.connected()) {
-      if (client.available()) {
-        char c = client.read();
-        Serial.write(c);
-        // if you've gotten to the end of the line (received a newline
-        // character) and the line is blank, the http request has ended,
-        // so you can send a reply
-        if (c == '\n' && currentLineIsBlank) {
-          // send a standard http response header
-          client.println("HTTP/1.1 200 OK");
-          delay(25);
-          client.println("Content-Type: text/html");
-          delay(25);
-          client.println("Connection: close");  // the connection will be closed after completion of the response
-          delay(25);
-          client.println("Refresh: 1");  // refresh the page automatically every 5 sec
-          delay(25);
-          client.println();
-          delay(25);
-          client.println("<!DOCTYPE HTML>");
-          delay(25);
-          client.println("<html>[");
-
-         uint8_t next = sensors.getNextSpot();
-         uint8_t y = 0;
-         for (uint8_t i=0; i<next; i++)
-         {
-           sensor s = sensors.getSensor(i);
-           if (strlen(s.name) > 0)
-           {
-               if (y++ > 0) client.print(',');
-               Generator::JsonObject<2> sensorObj;
-               sensorObj[s.name] = s.value;     
-               client.print(sensorObj);
-             }
-           }
-          
-          client.println("]</html>");
-          
-          break;
-        }
-        if (c == '\n') {
-          // you're starting a new line
-          currentLineIsBlank = true;
-        }
-        else if (c != '\r') {
-          // you've gotten a character on the current line
-          currentLineIsBlank = false;
-        }
-      }
-    }
-
-    // close the connection:
-    client.stop();
-    Serial.print("client ");
-    Serial.print(clientid);
-    Serial.println(" disonnected");
-  }
-  
+  runServer();
   tasks.Run(millis());
 }
 
@@ -187,116 +115,5 @@ void printWifiStatus() {
   Serial.println(" dBm");
 }
 
-int exportSlow(long unsigned int now)
-{
-  exports(true);
-}
 
-void exports(boolean all)
-{
-   uint8_t next = sensors.getNextSpot();
-   uint16_t current = sensors.getCurrentTick();
-   uint8_t limit = 0;
-   uint16_t diff;
-     
-   for (uint8_t i=0; i<next; i++)
-   {
-     sensor s = sensors.getSensor(i);
-     if (strlen(s.name) > 0)
-     {
-       /*
-       Serial.print("Sensor #");Serial.println(i);
-       Serial.print("Name: ");Serial.println(s.name);     
-       Serial.print("Value: ");Serial.println(s.value);     
-       Serial.print("Update: ");Serial.println(s.lastUpdate);
-       */
-       if (all) //Send all sensors that were updated in the last 60 ticks
-       {
-         diff = current - s.lastUpdate;
-         if (current < s.lastUpdate) diff = (65535 - s.lastUpdate) + current; //Rollover
-         limit = 60;
-       } else { //Send all sensors that were CHANGED in the last 2 ticks
-         diff = current - s.lastChange;
-         if (current < s.lastChange) diff = (65535 - s.lastChange) + current; //Rollover
-       }
-       
-       if (diff <= limit)
-       {
-         //{"cmd":"data","data":[{s.name: s.value}]}
-         char buffer[100];
-         Generator::JsonObject<4> root; 
-         
-         Generator::JsonObject<2> sensorObj;
-         sensorObj[s.name] = s.value;
-         
-         Generator::JsonArray<1> data;
-         data.add(sensorObj);
-         
-         root["cmd"] = "data";
-         root["data"] = data;
-         root.printTo(buffer, sizeof(buffer));           
-
-         wsc.sendMessage(buffer, strlen(buffer));
-         
-//         sprintf(buffer, "{\"cmd\":\"data\",\"data\":[{\"%s\": \"%f\"}]}", s.name, s.value);
-//          Serial.println(buffer);
-       }
-     }
-   }
-}
-
-int accel(long unsigned int now)
-{
-  sensors.add("Accel.x", accelerometer.readXData());
-  sensors.add("Accel.y", accelerometer.readYData());
-  sensors.add("Accel.z", accelerometer.readZData());  
-}
-
-int second(long unsigned int now)
-{
- wsc.run();
- sys();
- readOW();
-}
-
-int sensorTick(long unsigned int now)
-{
- exports(false);
- sensors.tick();  
-}
-
-int dht(long unsigned int now)
-{
-  float humidity;
-  float temperature;
-  int8_t res = dht::readFloatData(2, &temperature, &humidity, true);
-  if (res == 0) {
-    sensors.add("D0H", humidity);  
-    sensors.add("D0T", temperature);    
-  }
-}
-
-int sys()
-{
-  sensors.add("RSSI", WiFi.RSSI());
-}
-
-boolean dsconv = false;
-void readOW() {
-  if (!dsconv)
-  {
-      ds.CmdT();
-      dsconv=true;
-  } else {
-    dsconv=false;
-    byte rom[8];
-    char buffer[20];
-    while (ds.search(rom)) {
-      float temp = (float)ds.GetTemperature(rom) / 100;    
-      sprintf(buffer, "%02X%02X%02X%02X%02X%02X%02X%02X", rom[0],rom[1],rom[2],rom[3],rom[4],rom[5],rom[6],rom[7]);
-      sensors.add(buffer, temp);
-    }
-    ds.reset_search();
-  }
-}
 
