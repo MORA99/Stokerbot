@@ -122,31 +122,29 @@ void loop() {
           delay(25);
           client.println("Connection: close");  // the connection will be closed after completion of the response
           delay(25);
-//          client.println("Refresh: 5");  // refresh the page automatically every 5 sec
+          client.println("Refresh: 1");  // refresh the page automatically every 5 sec
           delay(25);
           client.println();
           delay(25);
           client.println("<!DOCTYPE HTML>");
           delay(25);
-          client.println("<html>");
+          client.println("<html>[");
 
-          for (uint16_t i=0; i<100; i++)
-          {
-            client.println("Dummy");
-            delay(2);
-          }
-          /*
-          // output the value of each analog input pin
-          for (int analogChannel = 0; analogChannel < 6; analogChannel++) {
-            int sensorReading = analogChannel; //analogRead(analogChannel);
-            client.print("analog input ");
-            client.print(analogChannel);
-            client.print(" is ");
-            client.print(sensorReading);
-            client.println("<br />");
-          }
-          */
-          client.println("</html>");
+         uint8_t next = sensors.getNextSpot();
+         uint8_t y = 0;
+         for (uint8_t i=0; i<next; i++)
+         {
+           sensor s = sensors.getSensor(i);
+           if (strlen(s.name) > 0)
+           {
+               if (y++ > 0) client.print(',');
+               Generator::JsonObject<2> sensorObj;
+               sensorObj[s.name] = s.value;     
+               client.print(sensorObj);
+             }
+           }
+          
+          client.println("]</html>");
           
           break;
         }
