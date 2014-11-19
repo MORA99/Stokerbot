@@ -1070,7 +1070,7 @@ uint16_t www_client_internal_datafill_callback(uint8_t fd){
                 if (browsertype==0){
                         // GET
                         len=fill_tcp_data_p(bufptr,0,PSTR("GET "));
-                        len=fill_tcp_data_p(bufptr,len,client_urlbuf);
+                        len=fill_tcp_data(bufptr,len,client_urlbuf);
                         len=fill_tcp_data(bufptr,len,client_urlbuf_var);
 
 						len=fill_custom_client_data(bufptr,len);
@@ -1080,14 +1080,14 @@ uint16_t www_client_internal_datafill_callback(uint8_t fd){
                         // them to send two packets (fragmented PDU)
                         // if we don't use HTTP/1.1 + Connection: close
                         len=fill_tcp_data_p(bufptr,len,PSTR(" HTTP/1.1\r\nHost: "));
-                        len=fill_tcp_data_p(bufptr,len,client_hoststr);
+                        len=fill_tcp_data(bufptr,len,client_hoststr);
                         len=fill_tcp_data_p(bufptr,len,PSTR("\r\nUser-Agent: SBNG/1.0\r\nAccept: text/html\r\nConnection: close\r\n\r\n"));
                 }else{
                         // POST
                         len=fill_tcp_data_p(bufptr,0,PSTR("POST "));
-                        len=fill_tcp_data_p(bufptr,len,client_urlbuf);
+                        len=fill_tcp_data(bufptr,len,client_urlbuf);
                         len=fill_tcp_data_p(bufptr,len,PSTR(" HTTP/1.1\r\nHost: "));
-                        len=fill_tcp_data_p(bufptr,len,client_hoststr);
+                        len=fill_tcp_data(bufptr,len,client_hoststr);
                         if (client_additionalheaderline){
                                 len=fill_tcp_data_p(bufptr,len,PSTR("\r\n"));
                                 len=fill_tcp_data_p(bufptr,len,client_additionalheaderline);

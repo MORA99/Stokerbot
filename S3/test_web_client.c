@@ -348,6 +348,10 @@ int main(void){
 		}
     	
 		eepromWriteByte(1, EEPROM_VERSION);
+		
+		eepromWriteByte(1200, 3); //Interval 3=30sec
+		eepromWriteStr(1000, "stokerlog.dk", 13); //host
+		eepromWriteStr(1100, "/incoming.php?v=1", 18); //url
 	}
 
 	if (dnsip[0] == 255)
@@ -503,21 +507,28 @@ int main(void){
 			IOexpInit();
 		#endif
 
-		//Each tick is 2ms
-		scheduleFunction(mywdt_reset, "mywdt_reset", 10, 10, -5);
-		
-		scheduleFunction(updateSimpleSensors, "SimpleSensors", 1000, 1000, 4);
-		scheduleFunction(updateOWSensors, "updateOWSensors", 1000, 1000, 4);
-		scheduleFunction(timedAlarmCheck, "timedAlarmCheck", 2500, 2500, 0);
-		scheduleFunction(getDHTData, "getDHTData", 2500, 2500, 4);
-		scheduleFunction(remoteIO, "remoteIO", 500, 500, 4);
-		scheduleFunction(sendData, "sendData", 15000, 15000, 2);
-		scheduleFunction(updateLCD, "updateLCD", 500, 500, 4);
-//		scheduleFunction(timedSaveEeprom, "timedSaveEeprom", 1800000, 1800000);
+		uint8_t interval = eepromReadByte(1200) * 10;
 
+		//Queue.h handles slow tasks, each tick is 1second	
+		scheduleFunction(updateSimpleSensors, "SimpleSensors", 2);
+		scheduleFunction(updateOWSensors, "updateOWSensors", 2);
+		scheduleFunction(timedAlarmCheck, "timedAlarmCheck", 5);
+		scheduleFunction(getDHTData, "getDHTData", 5);
+		scheduleFunction(remoteIO, "remoteIO", 1);
+		scheduleFunction(sendData, "sendData", interval);
+		scheduleFunction(updateLCD, "updateLCD", 1);
+		scheduleFunction(timedSaveEeprom, "timedSaveEeprom", 1800);
+
+		   uint16_t lastTick = tickS;
 	       while(1)
 		   {
-			if (scheduleRun(tick) == 0) handle_net(); //Idle task
+			if (lastTick != tickS)
+			{
+				scheduleRun(tickS);
+				lastTick = tickS;
+			}
+			handle_net();
+			mywdt_reset();
            }
         return (0);
 }
@@ -530,8 +541,14 @@ void updateLCD()
 
 void sendData()
 {
-	start_web_client = 1;
+	uint16_t interval = eepromReadByte(1200) * 10;
+	if (interval != 0)
+	{
+		printf("Starting webclient main\r\n");
+		start_web_client = 1;
+	}
 	hasLcd = eepromReadByte(50);
+	scheduleChangeFunction("sendData", tickS+interval, interval);
 }
 
 void remoteIO()

@@ -1,0 +1,22 @@
+<SCRIPT SRC='/loader.js'></SCRIPT>
+<script>
+menu(2,1);
+formstart('/settings/webclient');
+dw('<br>Data is sent every ');
+sels("interval");
+opt("3", interval, "30 seconds");
+opt("6", interval, "minute");
+opt("30", interval, "5 minuttes");
+opt("90", interval, "15 minuttes");
+opt("180", interval, "30 minuttes");
+opt("0", interval, "Never (Disabled)");
+sele();dw(" (change takes effect on next upload or reboot)");
+dw('<br>To http://');f('text','host',host,50);dw(' / ');f('text','url',url,50);dw(' &id=xyz&sensor..n=value..n<br>');
+formend();
+</script>
+
+The hostname and url must be entered into the 2 seperate fields.<br>
+Hostname is used in DNS lookup, so it must be a valid domain name or an IP address.<br>
+The url will be postfixed with &id=xyz&ADC0=10&ADC1=12 etc.<br>
+So make sure it already contains ?something=val<br>
+Defaults are stokerlog.dk / incoming.php?v=1 <br>

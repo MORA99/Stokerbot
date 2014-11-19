@@ -14,11 +14,10 @@ typedef struct _queue_item
     queue_time_t recur;
     queue_time_t next;
     char itemName[NAME_LIMIT];
-	int8_t priority; //-5 to +5
 } queueItem;
 
 //Functions
-int scheduleFunction(queuedFunction, const char *, queue_time_t, queue_time_t, int8_t priority);
+int scheduleFunction(queuedFunction, const char *, queue_time_t);
 int scheduleRemoveFunction(const char *);
 int scheduleChangeFunction(const char *, queue_time_t, queue_time_t);
 

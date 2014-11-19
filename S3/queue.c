@@ -13,16 +13,15 @@ static queueItem scheduleQueue[QUEUE_DEPTH];
 static int scheduleQueueGetTop(queueItem *returnItem);
 static int internalScheduleFunction(queueItem pItem);
 
-int scheduleFunction(queuedFunction pFunction, const char *pId, queue_time_t pInitialRun, queue_time_t pRecur, int8_t priority)
+int scheduleFunction(queuedFunction pFunction, const char *pId, queue_time_t pInitialRun)
 {
     int rv = 0;
 
     queueItem newItem;
     newItem.fPtr = pFunction;
-	newItem.priority = priority;
-    memset(newItem.itemName, 0, NAME_LIMIT);
+	memset(newItem.itemName, 0, NAME_LIMIT);
     memcpy(newItem.itemName, pId, strlen(pId));
-    newItem.recur = pRecur;
+    newItem.recur = pInitialRun;
     newItem.next = pInitialRun;
 
     rv = internalScheduleFunction(newItem);
@@ -63,6 +62,7 @@ int scheduleChangeFunction(const char *pId, queue_time_t pNewNext, queue_time_t 
             {
                 target.next = pNewNext;
                 target.recur = pNewRecur;
+				rv++;
             }
             internalScheduleFunction(target);
         } else {
@@ -78,21 +78,19 @@ int scheduleRun(queue_time_t pNow)
 {
     queueItem target;
     int rv = 0;
-	for (int prio=-5; prio<5; prio++)
-	{
 		for (int i = 0; i < itemsInQueue; ++i)
 		{
 			if(scheduleQueueGetTop(&target)==0)
 			{
-				if (target.priority == prio && target.next <= pNow)
+				if (target.next <= pNow)
 				{
-					target.fPtr();
-					rv++;
 					if(target.recur != 0)
 					{
 						target.next = pNow + target.recur;
 						internalScheduleFunction(target);
 					}
+					target.fPtr();					
+					rv++;
 				} else {
 					internalScheduleFunction(target);
 				}
@@ -100,7 +98,6 @@ int scheduleRun(queue_time_t pNow)
 				rv = -1;
 				break;
 			}
-		}
 	}
 
     return rv;

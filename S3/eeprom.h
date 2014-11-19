@@ -18,6 +18,10 @@
 	200-209	password
 	
 	400-520	Alarm data (8*15)	
+	
+	1000-1100 HTTP URL
+	1101	HTTP client enabled
+	1102	HTTP client send ?id=xyz
 */
 #ifndef sbeeprom
 	#define sbeeprom

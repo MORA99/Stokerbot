@@ -179,7 +179,9 @@ void updateOWSensors()
 			sercrc = sercrc + sensorexport[u];
 		  }
 		  
-		  printf("%s %d\r\n", sensorexport, sercrc);
+		  #ifdef OW_DEBUG
+			printf("%s %d\r\n", sensorexport, sercrc);
+		  #endif
 
 
         
