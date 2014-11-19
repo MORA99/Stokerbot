@@ -25,7 +25,7 @@ BMA222 accelerometer;
 Adafruit_TMP006 tmp006(0x41);
 //WebsocketClient wsc("echo.websocket.org", 80, "/", false, test);
 //WebsocketClient wsc("echo.websocket.org", 443, "/", true, test);
-WebsocketClient wsc("iotpool.com", 4000, "/", true, wscMessage);
+WebsocketClient wsc("iotpool.com", 4000, "/", wscMessage);
 Sensors sensors;
 
 DS18B20 ds(3);
@@ -80,6 +80,7 @@ void setup() {
   //randomSeed(analogRead(14));
 
   accelerometer.begin();
+//  wsc.sslconnect();
   wsc.connect();
   tmp006.begin();
 

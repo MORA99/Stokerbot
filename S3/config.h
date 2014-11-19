@@ -6,7 +6,7 @@
 
 #define EEPROM_VERSION 2
 #define SBNG_VERSION_MAJOR 2
-#define SBNG_VERSION_MINOR 13
+#define SBNG_VERSION_MINOR 14
 
 //BUILD TARGET
 //REV 1 - Ingen ekstern eeprom, ingen onboard 2401 til egen report
@@ -33,7 +33,7 @@ uint8_t *sensorScan; //peger på tempbuf
 char tempbuf[4096]; //was 512
 
 //8ADC+4digital for at der er plads til de digitale hvis de er input
-uint16_t simpleSensorValues[100];
+volatile uint16_t simpleSensorValues[100];
 uint8_t simpleSensorTypes[100];
 uint8_t simpleSensorDebounce[100];
 

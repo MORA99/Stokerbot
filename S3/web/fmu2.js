@@ -13,5 +13,5 @@ function sselect(name, selected, choose)
 }
 
 function menu(major,minor) {
-dw('<div id="header">Stokerbot S3 - Firmware 2.13<br><a href="/">Home</a>&nbsp;&nbsp;&nbsp;<a href="/settings/general/">Settings<a>&nbsp;&nbsp;&nbsp;<a href="/settings/net/">Network</a>&nbsp;&nbsp;&nbsp;<a href="/settings/io/">I/O</a>&nbsp;&nbsp;&nbsp;<a href="/settings/alarm/">Alarms</a></div><br><center>'); 
+dw('<div id="header">Stokerbot S3 - Firmware 2.14<br><a href="/">Home</a>&nbsp;&nbsp;&nbsp;<a href="/settings/general/">Settings<a>&nbsp;&nbsp;&nbsp;<a href="/settings/net/">Network</a>&nbsp;&nbsp;&nbsp;<a href="/settings/io/">I/O</a>&nbsp;&nbsp;&nbsp;<a href="/settings/alarm/">Alarms</a></div><br><center>'); 
 }

@@ -44,6 +44,8 @@
 #include "I2CEEPROM.h"
 #include "twi.h"
 
+#include "Queue.h"
+
 #if SBNG_TARGET == 50
 	#include "MCP23008.h"
 #endif
@@ -56,6 +58,9 @@ static void timedSaveEeprom(void);
 void timedAlarmCheck(void);
 bool save_cgivalue_if_found(char* buffer, char* name, uint16_t eeprom_location);
 void getDHTData();
+void updateLCD();
+void sendData();
+void remoteIO();
 
 static uint8_t mymac[6] = {0x56,0x55,0x58,0x10,0x00,0x29};
 
@@ -69,11 +74,9 @@ uint8_t dnsip[]={8,8,8,8}; // the google public DNS, don't change unless there i
 
 uint8_t buf[BUFFER_SIZE+1];
 	char printbuff[100];
-uint8_t *sensorScan;
+extern uint8_t *sensorScan;
 
 extern uint8_t start_web_client;
-extern uint16_t timerCounter;
-static uint16_t timerOW, timerSimple, timer_lcd, timer_eeprom, timer_sendOWSensors, timer_ioalarm, timerRemoteIO;
 static uint8_t hasLcd;
 
 bool DS18B20Conv = false;
@@ -407,6 +410,9 @@ int main(void){
 	{
 		mymac[o] = systemID[o];
 	}
+	printf("IP: %u.%u.%u.%u\r\n", myip[0],myip[1],myip[2],myip[3]);
+	printf("MAC: %02X%02X%02X%02X%02X%02X\r\n", mymac[0],mymac[1],mymac[2],mymac[3],mymac[4],mymac[5]);
+	
 
 	if (hasLcd > 0 && hasLcd != 255)
 	{
@@ -497,77 +503,49 @@ int main(void){
 			IOexpInit();
 		#endif
 
+		//Each tick is 2ms
+		scheduleFunction(mywdt_reset, "mywdt_reset", 10, 10, -5);
+		
+		scheduleFunction(updateSimpleSensors, "SimpleSensors", 1000, 1000, 4);
+		scheduleFunction(updateOWSensors, "updateOWSensors", 1000, 1000, 4);
+		scheduleFunction(timedAlarmCheck, "timedAlarmCheck", 2500, 2500, 0);
+		scheduleFunction(getDHTData, "getDHTData", 2500, 2500, 4);
+		scheduleFunction(remoteIO, "remoteIO", 500, 500, 4);
+		scheduleFunction(sendData, "sendData", 15000, 15000, 2);
+		scheduleFunction(updateLCD, "updateLCD", 500, 500, 4);
+//		scheduleFunction(timedSaveEeprom, "timedSaveEeprom", 1800000, 1800000);
 
-	       while(1){
-/*
-			//Makes the bot refresh dns data every 18hours (65535seconds)
-			if (tickS == 0)
-			{
-				dns_state = 0;
-				dnsTimer = tickS;
-			}
-*/
-			mywdt_reset();
-			
-			//Hvert 5. sekund opdatere vi simple sensors, de sendes hvert 45. sekund når web_client er fri
-			if (tickDiffS(timerSimple) >= 2)
-			{
-				timerSimple = tickS;
-				updateSimpleSensors();
-			}
-
-			if (tickDiffS(timerRemoteIO) >= 1)
-			{
-				#if SBNG_TARGET == 50
-					if (alarmTimeout > 0)
-						alarmTimeout--;
-				#endif
-
-				timerRemoteIO = tickS;
-				checkTimedEvents();
-			}
-	
-			if (tickDiffS(timerOW) >= 2)
-			{
- 				timerOW = tickS;
-				updateOWSensors();
-			}
-
-			if (tickDiffS(timer_sendOWSensors) >= 30 && start_web_client==0)
-			{
-				timer_sendOWSensors = tickS;
-				start_web_client = 1;
-				hasLcd = eepromReadByte(50);
-			}
-
-			if (tickDiffS(timer_lcd) >= 1)
-			{
-				timer_lcd = tickS;
-				if (hasLcd > 0 && hasLcd != 255)
-					lcd_update();
-			}
-
-			if (tickDiffS(timer_eeprom) >= 1800) //every 30min saves changes to eeprom from counters
-			{
-				timer_eeprom = tickS;
-				timedSaveEeprom();
-			}
-
-			if (tickDiffS(timer_ioalarm) >= 5)
-			{
-				timer_ioalarm = tickS;
-				timedAlarmCheck();
-				getDHTData();
-			}
-
-			handle_net();
-        }
+	       while(1)
+		   {
+			if (scheduleRun(tick) == 0) handle_net(); //Idle task
+           }
         return (0);
+}
+
+void updateLCD()
+{
+	if (hasLcd > 0 && hasLcd != 255)
+		lcd_update();
+}
+
+void sendData()
+{
+	start_web_client = 1;
+	hasLcd = eepromReadByte(50);
+}
+
+void remoteIO()
+{
+	#if SBNG_TARGET == 50
+	if (alarmTimeout > 0)
+	alarmTimeout--;
+	#endif
+
+	checkTimedEvents();	
 }
 
 void getDHTData()
 {
-	printf("Reading dht ... \r\n");
 	int16_t rawtemperature = 0;
 	int16_t rawhumidity = 0;
 

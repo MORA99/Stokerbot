@@ -6,12 +6,12 @@ uint16_t seconds, tick;
 uint16_t tickS = 1;
 uint16_t timerCounter;
 
-uint16_t tickDiff(uint16_t oldtick)
+inline uint16_t tickDiff(uint16_t oldtick)
 {
 	return tick - oldtick;
 }
 
-uint16_t tickDiffS(uint16_t oldtick)
+inline uint16_t tickDiffS(uint16_t oldtick)
 {
 	return tickS - oldtick;
 }
@@ -41,5 +41,6 @@ ISR(TIMER1_COMPA_vect)
 
   if (tick % 10 == 0)
   	twiDecTo();
+	  
   updateCounters();
 }

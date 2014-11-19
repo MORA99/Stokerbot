@@ -90,7 +90,7 @@ int dht(long unsigned int now)
   int8_t res = dht::readFloatData(2, &temperature, &humidity, true);
   if (res == 0) {
     sensors.add("D0H", humidity);  
-    sensors.add("D0T", temperature);    
+    sensors.add("D0T", temperature);
   }
 }
 
