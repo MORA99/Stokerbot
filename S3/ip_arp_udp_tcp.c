@@ -82,7 +82,7 @@ static uint8_t seqnum=0xa; // my initial tcp sequence number
 
 #define CLIENTMSS 550
 #define TCP_DATA_START ((uint16_t)TCP_SRC_PORT_H_P+(buf[TCP_HEADER_LEN_P]>>4)*4)
-const char arpreqhdr[] PROGMEM ={0,1,8,0,6,4,0,1};
+const char arpreqhdr[] PROGMEM = {0,1,8,0,6,4,0,1};
 #if defined (NTP_client) ||  defined (WOL_client) || defined (UDP_client) || defined (TCP_client) || defined (PING_client)
 const char iphdr[] PROGMEM ={0x45,0,0,0x82,0,0,0x40,0,0x20}; // 0x82 is the total len on ip, 0x20 is ttl (time to live)
 #endif
@@ -319,25 +319,60 @@ void make_tcphead(uint8_t *buf,uint16_t rel_ack_num,uint8_t cp_seq)
 
 void make_arp_answer_from_request(uint8_t *buf)
 {
-        uint8_t i=0;
-        //
-        make_eth(buf);
-        buf[ETH_ARP_OPCODE_H_P]=ETH_ARP_OPCODE_REPLY_H_V;
-        buf[ETH_ARP_OPCODE_L_P]=ETH_ARP_OPCODE_REPLY_L_V;
-        // fill the mac addresses:
-        while(i<6){
-                buf[ETH_ARP_DST_MAC_P+i]=buf[ETH_ARP_SRC_MAC_P+i];
-                buf[ETH_ARP_SRC_MAC_P+i]=macaddr[i];
-                i++;
-        }
-        i=0;
-        while(i<4){
-                buf[ETH_ARP_DST_IP_P+i]=buf[ETH_ARP_SRC_IP_P+i];
-                buf[ETH_ARP_SRC_IP_P+i]=ipaddr[i];
-                i++;
-        }
-        // eth+arp is 42 bytes:
-        enc28j60PacketSend(42,buf); 
+	uint8_t i=0;
+	//
+	make_eth(buf);
+	buf[ETH_ARP_OPCODE_H_P]=ETH_ARP_OPCODE_REPLY_H_V;
+	buf[ETH_ARP_OPCODE_L_P]=ETH_ARP_OPCODE_REPLY_L_V;
+	// fill the mac addresses:
+	while(i<6){
+		buf[ETH_ARP_DST_MAC_P+i]=buf[ETH_ARP_SRC_MAC_P+i];
+		buf[ETH_ARP_SRC_MAC_P+i]=macaddr[i];
+		i++;
+	}
+	i=0;
+	while(i<4){
+		buf[ETH_ARP_DST_IP_P+i]=buf[ETH_ARP_SRC_IP_P+i];
+		buf[ETH_ARP_SRC_IP_P+i]=ipaddr[i];
+		i++;
+	}
+	// eth+arp is 42 bytes:
+	enc28j60PacketSend(42,buf);
+}
+
+void make_arp_broadcast(uint8_t* mac, uint8_t* ip)
+{
+	printf("Arp broadcast");
+	
+	uint8_t buf[42];
+	
+	//0-5 Ethernet dest mac
+	//6-11 Ethernet src mac
+	//8-13 our mac
+	//18-23 ff (dest mac)
+	for (uint8_t i=0; i<6; i++)
+	{
+		buf[i] = 0xff;
+		buf[ETH_ARP_P+18+i] = 0xff;		
+		
+		buf[6+i] = mac[i];
+		buf[ETH_ARP_P+8+i] = mac[i];
+	}
+
+	//Ethenet packet type 0806 = ARP
+	buf[12] = 0x08;	
+	buf[13] = 0x06;	
+	
+	for (uint8_t i=0; i<8; i++) buf[ETH_ARP_P+i] = pgm_read_byte(arpreqhdr+i); //Static arp header
+
+	//14-17 our ip
+	for (uint8_t i=0; i<4; i++)
+	{
+		buf[ETH_ARP_P+14+i] = myip[i];
+		buf[ETH_ARP_P+24+i] = myip[i];
+	}
+			
+	enc28j60PacketSend(42,buf);
 }
 
 void make_echo_reply_from_request(uint8_t *buf,uint16_t len)

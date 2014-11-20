@@ -257,7 +257,6 @@
 // (note: maximum ethernet frame length would be 1518)
 #define        MAX_FRAMELEN        1500        
 
-
 // functions
 extern uint8_t enc28j60ReadOp(uint8_t op, uint8_t address);
 extern void enc28j60WriteOp(uint8_t op, uint8_t address, uint8_t data);
@@ -274,6 +273,5 @@ extern uint8_t enc28j60hasRxPkt(void);
 extern uint16_t enc28j60PacketReceive(uint16_t maxlen, uint8_t* packet);
 extern uint8_t enc28j60getrev(void);
 extern uint8_t enc28j60linkup(void);
-
 #endif
 //@}

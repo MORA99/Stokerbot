@@ -496,13 +496,14 @@ int main(void){
 		initTimedEvents();
 
 		mywdt_sleep(500);
-/*
+
 		while (!enc28j60linkup())
 		{
 			printf("Waiting for link \r\n");
 			mywdt_sleep(100);
 		}
-*/
+		make_arp_broadcast(mymac, myip);
+
 		#if SBNG_TARGET == 50
 			IOexpInit();
 		#endif
@@ -563,6 +564,8 @@ void remoteIO()
 
 void getDHTData()
 {
+	make_arp_broadcast(mymac, myip);
+	
 	int16_t rawtemperature = 0;
 	int16_t rawhumidity = 0;
 
