@@ -61,6 +61,7 @@ void getDHTData();
 void updateLCD();
 void sendData();
 void remoteIO();
+void ARPbroadcast();
 
 static uint8_t mymac[6] = {0x56,0x55,0x58,0x10,0x00,0x29};
 
@@ -68,9 +69,6 @@ uint8_t gwip[4] = {192,168,1,1};
 uint8_t myip[4] = {192,168,1,65};
 uint8_t netmask[]={255,255,255,0};
 uint8_t dnsip[]={8,8,8,8}; // the google public DNS, don't change unless there is a real need
-
-// listen port for tcp/www:
-#define MYWWWPORT 80
 
 uint8_t buf[BUFFER_SIZE+1];
 	char printbuff[100];
@@ -233,7 +231,8 @@ int main(void){
 	SETBIT(DDRC, 7); //Alarm udgang
 #endif
 
-		usart_init(9600);
+		//usart_init(9600);
+		usart_init(250000);
 		stdout = &uart_str;
 		stderr = &uart_str;
 		stdin  = &uart_str;
@@ -298,7 +297,8 @@ int main(void){
 		dnsip[2] = 8;
 		dnsip[3] = 8;
 
-		eepromWriteByte(29, 80);  //web port
+		eepromWriteWord(23, 80);  //web port
+		eepromWriteByte(25, 0); //Done Disable Broadcast
 		eepromWriteByte(10, 0);  //dhcp off
 		eepromWriteByte(50, 0);  //no LCD
 
@@ -363,9 +363,18 @@ int main(void){
 		save_ip_addresses();
 	}
 
+	if (eepromReadByte(2) < 3)
+	{
+		eepromWriteByte(1, EEPROM_VERSION);	
+		eepromWriteWord(29, 80);  //web port
+		eepromWriteByte(25, 0); //Dont disable broadcast
+		eepromWriteByte(1200, 3); //Interval 3=30sec
+		eepromWriteStr(1000, "stokerlog.dk", 13); //host
+		eepromWriteStr(1100, "/incoming.php?v=1", 18); //url	
+	}
 
 		read_ip_addresses();
-
+		uint16_t webport = eepromReadWord(23);  //web port
 
 		OW_selectPort(1);
         int nSensors = search_sensors(MAXSENSORS);  //Finder alle sensore (op til max)
@@ -416,6 +425,7 @@ int main(void){
 	}
 	printf("IP: %u.%u.%u.%u\r\n", myip[0],myip[1],myip[2],myip[3]);
 	printf("MAC: %02X%02X%02X%02X%02X%02X\r\n", mymac[0],mymac[1],mymac[2],mymac[3],mymac[4],mymac[5]);
+	printf("Webport: %u\r\n", webport);
 	
 
 	if (hasLcd > 0 && hasLcd != 255)
@@ -453,7 +463,10 @@ int main(void){
 
 		mywdt_reset();
 
-        enc28j60Init(mymac);
+		bool bcast = false;
+		if (eepromReadByte(25) == 1) bcast=true;
+			
+        enc28j60Init(mymac, bcast);
         enc28j60clkout(0);
         _delay_loop_1(0); // 60us
 
@@ -487,7 +500,7 @@ int main(void){
         enc28j60PhyWrite(PHLCON,0x476);
        
         //init the web server ethernet/ip layer:
-        init_ip_arp_udp_tcp(mymac,myip,MYWWWPORT);
+        init_ip_arp_udp_tcp(mymac,myip,webport);
         // init the web client:
         client_set_gwip(gwip);  // e.g internal IP of dsl router
 		mywdt_reset();
@@ -497,12 +510,16 @@ int main(void){
 
 		mywdt_sleep(500);
 
-		while (!enc28j60linkup())
+		if (bcast)
 		{
-			printf("Waiting for link \r\n");
-			mywdt_sleep(100);
+			while (!enc28j60linkup())
+			{
+				printf("Waiting for link \r\n");
+				mywdt_sleep(100);
+			}
+			make_arp_broadcast(mymac, myip);
+			scheduleFunction(ARPbroadcast, "ARPbroadcast", 5);
 		}
-		make_arp_broadcast(mymac, myip);
 
 		#if SBNG_TARGET == 50
 			IOexpInit();
@@ -532,6 +549,11 @@ int main(void){
 			mywdt_reset();
            }
         return (0);
+}
+
+void ARPbroadcast()
+{
+	make_arp_broadcast(mymac, myip);	
 }
 
 void updateLCD()
@@ -564,8 +586,6 @@ void remoteIO()
 
 void getDHTData()
 {
-	make_arp_broadcast(mymac, myip);
-	
 	int16_t rawtemperature = 0;
 	int16_t rawhumidity = 0;
 

@@ -170,7 +170,7 @@ void enc28j60clkout(uint8_t clk)
 	enc28j60Write(ECOCON, clk & 0x7);
 }
 
-void enc28j60Init(uint8_t* macaddr)
+void enc28j60Init(uint8_t* macaddr, bool disablebroadcast)
 {
 	// initialize I/O
         // ss as output:
@@ -223,13 +223,18 @@ void enc28j60Init(uint8_t* macaddr)
         // 06 08 -- ff ff ff ff ff ff -> ip checksum for theses bytes=f7f9
         // in binary these poitions are:11 0000 0011 1111
         // This is hex 303F->EPMM0=0x3f,EPMM1=0x30
-	//enc28j60Write(ERXFCON, ERXFCON_UCEN|ERXFCON_CRCEN|ERXFCON_PMEN);
-	//enc28j60Write(EPMM0, 0x3f);
-	//enc28j60Write(EPMM1, 0x30);
-	//enc28j60Write(EPMCSL, 0xf9);
-	//enc28j60Write(EPMCSH, 0xf7);
+		
+		if (disablebroadcast)		
+		{
+			enc28j60Write(ERXFCON, ERXFCON_UCEN|ERXFCON_CRCEN|ERXFCON_ANDOR);
+		} else {
+			enc28j60Write(ERXFCON, ERXFCON_UCEN|ERXFCON_CRCEN|ERXFCON_PMEN);
+			enc28j60Write(EPMM0, 0x3f);
+			enc28j60Write(EPMM1, 0x30);
+			enc28j60Write(EPMCSL, 0xf9);
+			enc28j60Write(EPMCSH, 0xf7);
+		}
 	
-	enc28j60Write(ERXFCON, ERXFCON_UCEN|ERXFCON_CRCEN|ERXFCON_ANDOR);
 	
         //
         //

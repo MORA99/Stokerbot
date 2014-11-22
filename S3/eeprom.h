@@ -7,7 +7,8 @@
 	11-14 	my ip
  	15-18	gateway
 	19-22	netmask
-	29		web-port
+	23(-24)	web-port (unused)
+	25		Disable broadcast
 	50		LCD enabled (51-59 reserved for future)
 	31-34	dns server
 

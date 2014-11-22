@@ -342,8 +342,6 @@ void make_arp_answer_from_request(uint8_t *buf)
 
 void make_arp_broadcast(uint8_t* mac, uint8_t* ip)
 {
-	printf("Arp broadcast");
-	
 	uint8_t buf[42];
 	
 	//0-5 Ethernet dest mac

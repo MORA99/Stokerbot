@@ -45,6 +45,7 @@ void usart_init(unsigned long baudrate)
 	//UCSRC = 0x06 + ((parity+1)<<4);
 	//UCSRC |= (1<<USBS);
 	//Teiler wird gesetzt 
+	
 	UBRR0=(F_CPU / (baudrate * 16L) - 1);
 }
 

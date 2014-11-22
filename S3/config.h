@@ -4,7 +4,7 @@
   #include "config.h"
   #include "AVR035.h"
 
-#define EEPROM_VERSION 2
+#define EEPROM_VERSION 3
 #define SBNG_VERSION_MAJOR 2
 #define SBNG_VERSION_MINOR 14
 
