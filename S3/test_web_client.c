@@ -47,6 +47,8 @@
 
 #include "Queue.h"
 
+#include "dhcp_client.h"
+
 #if SBNG_TARGET == 50
 	#include "MCP23008.h"
 #endif
@@ -63,6 +65,7 @@ void updateLCD();
 void sendData();
 void remoteIO();
 void ARPbroadcast();
+void DHCPTimer();
 
 static uint8_t mymac[6] = {0x56,0x55,0x58,0x10,0x00,0x29};
 
@@ -70,6 +73,7 @@ uint8_t gwip[4] = {192,168,1,1};
 uint8_t myip[4] = {192,168,1,65};
 uint8_t netmask[]={255,255,255,0};
 uint8_t dnsip[]={8,8,8,8}; // the google public DNS, don't change unless there is a real need
+uint8_t dhcp = 0;
 
 uint8_t buf[BUFFER_SIZE+1];
 	char printbuff[100];
@@ -424,10 +428,12 @@ int main(void){
 	{
 		mymac[o] = systemID[o];
 	}
+	
 	printf("IP: %u.%u.%u.%u\r\n", myip[0],myip[1],myip[2],myip[3]);
 	printf("MAC: %02X%02X%02X%02X%02X%02X\r\n", mymac[0],mymac[1],mymac[2],mymac[3],mymac[4],mymac[5]);
 	printf("Webport: %u\r\n", webport);
-	
+
+	dhcp = eepromReadByte(10);
 
 	if (hasLcd > 0 && hasLcd != 255)
 	{
@@ -470,6 +476,27 @@ int main(void){
         enc28j60Init(mymac, bcast);
         enc28j60clkout(0);
         _delay_loop_1(0); // 60us
+
+
+	if (dhcp > 0)
+	{
+		printf("DHCP request ...\r\n");
+        int8_t rval=0;
+        init_mac(mymac);
+        while(rval==0){
+	        uint16_t plen=enc28j60PacketReceive(BUFFER_SIZE, buf);
+	        buf[BUFFER_SIZE]='\0';
+	        rval=packetloop_dhcp_initial_ip_assignment(buf,plen,mymac[5]);
+        }
+        // we have an IP:
+		printf("Got IP from DHCP ... \r\n");
+        dhcp_get_my_ip(myip,netmask,gwip);
+        client_ifconfig(myip,netmask);
+        printf("IP : %u.%u.%u.%u \r\n",myip[0],myip[1],myip[2],myip[3]);
+		printf("GW : %u.%u.%u.%u \r\n",gwip[0],gwip[1],gwip[2],gwip[3]);
+	}
+
+
 
 		mywdt_reset();
 
@@ -543,7 +570,9 @@ int main(void){
 		scheduleFunction(sendData, "sendData", interval);
 		scheduleFunction(updateLCD, "updateLCD", 1);
 		scheduleFunction(timedSaveEeprom, "timedSaveEeprom", 1800);
-
+		if (dhcp > 0)
+			scheduleFunction(DHCPTimer, "dhcpTimer", 6);
+		
 		   uint16_t lastTick = tickS;
 	       while(1)
 		   {
@@ -558,6 +587,11 @@ int main(void){
 			mywdt_reset();
            }
         return (0);
+}
+
+void DHCPTimer()
+{
+	dhcp_6sec_tick();
 }
 
 void ARPbroadcast()

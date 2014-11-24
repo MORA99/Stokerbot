@@ -11,8 +11,8 @@ function save(id) {
 	var V = document.getElementById("V"+id).value;
 	var D = document.getElementById("D"+id).value;
 	var P = document.getElementById("P"+id).value;
-	var R = document.getElementById("R"+id).value;
-	var E = document.getElementById("E"+id).value;
+	var R = (document.getElementById("R"+id).checked)?1:0;
+	var E = (document.getElementById("E"+id).checked)?1:0;
 	var url = '?alarmid=' + id + '&S=' + S + '&T=' + T + '&V=' + V + '&D=' + D + '&P=' + P + '&R=' + R + '&E=' + E;
 	
 	microAjax("/settings/savealarm"+url, function (res) {

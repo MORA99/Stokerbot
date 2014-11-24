@@ -12,6 +12,7 @@
 #ifndef IP_CONFIG_H
 #define IP_CONFIG_H
 
+#define ENC28J60_BROADCAST
 #undef NTP_client
 #define UDP_client
 #define WWW_server
