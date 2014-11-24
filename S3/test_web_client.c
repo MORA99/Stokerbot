@@ -1,12 +1,13 @@
-/*********************************************
- * vim:sw=8:ts=8:si:et
- * To use the above modeline in vim you must have "set modeline" in your .vimrc
- * Author: Guido Socher
- * Copyright: GPL V2
- * See http://www.gnu.org/licenses/gpl.html
- *
- * Chip type           : Atmega168 or Atmega328 with ENC28J60
- *********************************************/
+/************************************************************************
+2.15 Changelog
+* Alle 8 alarmer virker nu
+* Tilføjet ajax save funktion til alarm siden, så den ikke reloader for hver alarm.
+
+
+************************************************************************/
+
+
+
 #include "config.h"
 #include "AVR035.h"
 

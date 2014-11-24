@@ -28,6 +28,6 @@ function showAlarm(id)
 	dw('</td><td>');
 	cb('E'+id, alarms[id][6], 1);
 	dw('</td><td>');
-  formend();
+    dw('<input type="button" id="btn'+id+'" onClick="save('+id+');" value="Save"></form>');
 	dw('</td></tr>');              
 }

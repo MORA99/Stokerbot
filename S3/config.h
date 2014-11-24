@@ -21,9 +21,9 @@
 
 #define BUFFER_SIZE 1600 //was 800
 
-#define MAXSENSORS 60 //tempbuf der bruges i sensorScan kan maks holde 31sensore, buffer der bruges ved afseldelse max 35sensore
+#define MAXSENSORS 30 //tempbuf der bruges i sensorScan kan maks holde 31sensore, buffer der bruges ved afseldelse max 35sensore
 #define SENSORSIZE 11
-#define NUMALARMS 4
+#define NUMALARMS 8
 
 //Sensor array
 enum SensorData { FAMILY, ID1, ID2, ID3, ID4, ID5, ID6, CRC, VALUE1, VALUE2, SIGN };

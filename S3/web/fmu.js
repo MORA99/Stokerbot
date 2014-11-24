@@ -9,7 +9,7 @@ function isChecked(a){return a>0?" checked ":""}
 function isCheckedR(a,b){return a==b?" checked ":""}
 function isSelected(a,b){return a==b?" selected ":""}
 function dport(a,b,c){dw("<tr><td>Digital port "+a+" type</td><td>");dw('<select name="'+b+'">');opt(0,c,"Output");opt(2,c,"Input");opt(3,c,"Counter");opt(4,c,"DHT22");opt(5,c,"DHT11");dw("</select></td></tr>")}
-function sels(name){dw('<select name="'+name+'">')}
+function sels(name){dw('<select name="'+name+'" id="'+name+'">')}
 function sele(name){dw('</select>')}
 function isChecked(a){return a>0?" checked ":""}
 function isCheckedR(a,b){return a==b?" checked ":""}

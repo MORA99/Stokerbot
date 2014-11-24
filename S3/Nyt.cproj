@@ -64,7 +64,7 @@
   <avrgcc.compiler.general.ChangeDefaultBitFieldUnsigned>True</avrgcc.compiler.general.ChangeDefaultBitFieldUnsigned>
   <avrgcc.compiler.symbols.DefSymbols>
     <ListValues>
-      <Value>F_CPU=8000000UL</Value>
+      <Value>F_CPU=16000000UL</Value>
     </ListValues>
   </avrgcc.compiler.symbols.DefSymbols>
   <avrgcc.compiler.optimization.level>Optimize for size (-Os)</avrgcc.compiler.optimization.level>
