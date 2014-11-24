@@ -49,8 +49,8 @@ uint16_t fill_custom_client_data(uint8_t *bufptr,uint16_t len);
  bool signed_save_cgivalue_if_found(char* buffer, char* name, uint16_t eeprom_location);
  bool save_checkbox_cgivalue(char* buffer, char* name, uint16_t eeprom_location);
  bool word_save_cgivalue_if_found(char* buffer, char* name, uint16_t eeprom_location);
- void browserresult_callback(uint8_t statuscode,uint16_t datapos, uint16_t len);
- void lcd_callback(uint8_t statuscode,uint16_t datapos, uint16_t len);
+ void browserresult_callback(uint16_t statuscode,uint16_t datapos, uint16_t len);
+ void lcd_callback(uint16_t statuscode,uint16_t datapos, uint16_t len);
  bool user_is_auth(char* buffer);
 
  void checkTimedEvents();

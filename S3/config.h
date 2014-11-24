@@ -6,7 +6,7 @@
 
 #define EEPROM_VERSION 3
 #define SBNG_VERSION_MAJOR 2
-#define SBNG_VERSION_MINOR 14
+#define SBNG_VERSION_MINOR 20
 
 //BUILD TARGET
 //REV 1 - Ingen ekstern eeprom, ingen onboard 2401 til egen report

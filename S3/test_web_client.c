@@ -501,9 +501,15 @@ int main(void){
         enc28j60PhyWrite(PHLCON,0x476);
        
         //init the web server ethernet/ip layer:
-        init_ip_arp_udp_tcp(mymac,myip,webport);
+		init_udp_or_www_server(mymac,myip);
+		client_ifconfig(myip,netmask);
+		www_server_port(webport);
+		char agent[20];
+		sprintf(agent, "S3S/%u.%u", SBNG_VERSION_MAJOR,SBNG_VERSION_MINOR);
+		set_user_agent(agent);
         // init the web client:
-        client_set_gwip(gwip);  // e.g internal IP of dsl router
+        //client_set_gwip(gwip);  // e.g internal IP of dsl router
+		
 		mywdt_reset();
 		printf("ENC version %u\r\n",enc28j60getrev());
 		mywdt_reset();
@@ -518,7 +524,7 @@ int main(void){
 				printf("Waiting for link \r\n");
 				mywdt_sleep(100);
 			}
-			make_arp_broadcast(mymac, myip);
+			gratutious_arp((uint8_t*)tempbuf);
 			scheduleFunction(ARPbroadcast, "ARPbroadcast", 5);
 		}
 
@@ -541,11 +547,13 @@ int main(void){
 		   uint16_t lastTick = tickS;
 	       while(1)
 		   {
+			
 			if (lastTick != tickS)
 			{
 				scheduleRun(tickS);
 				lastTick = tickS;
 			}
+			
 			handle_net();
 			mywdt_reset();
            }
@@ -554,7 +562,7 @@ int main(void){
 
 void ARPbroadcast()
 {
-	make_arp_broadcast(mymac, myip);	
+	gratutious_arp((uint8_t*)tempbuf);
 }
 
 void updateLCD()
@@ -568,7 +576,6 @@ void sendData()
 	uint16_t interval = eepromReadByte(1200) * 10;
 	if (interval != 0)
 	{
-		printf("Starting webclient main\r\n");
 		start_web_client = 1;
 	}
 	hasLcd = eepromReadByte(50);

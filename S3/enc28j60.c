@@ -2,24 +2,33 @@
  * vim:sw=8:ts=8:si:et
  * To use the above modeline in vim you must have "set modeline" in your .vimrc
  * Author: Guido Socher 
- * Copyright: GPL V2
- * http://www.gnu.org/licenses/gpl.html
+ * Copyright:LGPL V2
+ * See http://www.gnu.org/licenses/old-licenses/lgpl-2.0.html
  *
  * Based on the enc28j60.c file from the AVRlib library by Pascal Stang.
  * For AVRlib See http://www.procyonengineering.com/
  * Used with explicit permission of Pascal Stang.
  *
  * Title: Microchip ENC28J60 Ethernet Interface Driver
- * Chip type           : ATMEGA88 with ENC28J60
+ * Chip type           : ATMEGA88/ATMEGA168/ATMEGA328/ATMEGA644 with ENC28J60
  *********************************************/
 #include <avr/io.h>
+#include "ip_config.h"
 #include "enc28j60.h"
 //
+#ifndef F_CPU
+#define F_CPU 12500000UL  // 12.5 MHz
+//#else 
+//#warning "F_CPU was already defined" 
+#endif
+
 #ifndef ALIBC_OLD
 #include <util/delay_basic.h>
 #else
 #include <avr/delay.h>
 #endif
+
+
 static uint8_t Enc28j60Bank;
 static int16_t gNextPacketPtr;
 #define ENC28J60_CONTROL_PORT   PORTB
@@ -125,22 +134,18 @@ uint8_t enc28j60Read(uint8_t address)
         return enc28j60ReadOp(ENC28J60_READ_CTRL_REG, address);
 }
 
-// read upper 8 bits
-uint16_t enc28j60PhyReadH(uint8_t address)
+// read 16 bits
+uint16_t enc28j60PhyRead(uint8_t address)
 {
-
 	// Set the right address and start the register read operation
 	enc28j60Write(MIREGADR, address);
 	enc28j60Write(MICMD, MICMD_MIIRD);
-        _delay_loop_1(40); // 10us
-
 	// wait until the PHY read completes
 	while(enc28j60Read(MISTAT) & MISTAT_BUSY);
-
 	// reset reading bit
 	enc28j60Write(MICMD, 0x00);
-	
-	return (enc28j60Read(MIRDH));
+        // get data value from MIRDL and MIRDH
+	return ((enc28j60Read(MIRDH)<<8)|enc28j60Read(MIRDL));
 }
 
 void enc28j60Write(uint8_t address, uint8_t data)
@@ -170,7 +175,7 @@ void enc28j60clkout(uint8_t clk)
 	enc28j60Write(ECOCON, clk & 0x7);
 }
 
-void enc28j60Init(uint8_t* macaddr, bool disablebroadcast)
+void enc28j60Init(uint8_t* macaddr, bool bcast)
 {
 	// initialize I/O
         // ss as output:
@@ -178,15 +183,15 @@ void enc28j60Init(uint8_t* macaddr, bool disablebroadcast)
 	CSPASSIVE; // ss=0
         //	
 	ENC28J60_CONTROL_DDR  |= 1<<ENC28J60_CONTROL_SI | 1<<ENC28J60_CONTROL_SCK; // mosi, sck output
-	ENC28J60_CONTROL_DDR|= 1<<ENC28J60_CONTROL_SO; // MISO is input
+	ENC28J60_CONTROL_DDR&=~(1<<ENC28J60_CONTROL_SO); // MISO is input
         //
-        ENC28J60_CONTROL_PORT|= 1<<ENC28J60_CONTROL_SI; // MOSI low
-        ENC28J60_CONTROL_PORT|= 1<<ENC28J60_CONTROL_SCK; // SCK low
+        ENC28J60_CONTROL_PORT&=~(1<<ENC28J60_CONTROL_SI); // MOSI low
+        ENC28J60_CONTROL_PORT&=~(1<<ENC28J60_CONTROL_SCK); // SCK low
 	//
 	// initialize SPI interface
 	// master mode and Fosc/2 clock:
         SPCR = (1<<SPE)|(1<<MSTR);
-        SPSR |= (0<<SPI2X);
+        SPSR |= (1<<SPI2X);
 	// perform system reset
 	enc28j60WriteOp(ENC28J60_SOFT_RESET, 0, ENC28J60_SOFT_RESET);
         _delay_loop_2(0); // 20ms
@@ -223,19 +228,11 @@ void enc28j60Init(uint8_t* macaddr, bool disablebroadcast)
         // 06 08 -- ff ff ff ff ff ff -> ip checksum for theses bytes=f7f9
         // in binary these poitions are:11 0000 0011 1111
         // This is hex 303F->EPMM0=0x3f,EPMM1=0x30
-		
-		if (disablebroadcast)		
-		{
-			enc28j60Write(ERXFCON, ERXFCON_UCEN|ERXFCON_CRCEN|ERXFCON_ANDOR);
-		} else {
-			enc28j60Write(ERXFCON, ERXFCON_UCEN|ERXFCON_CRCEN|ERXFCON_PMEN);
-			enc28j60Write(EPMM0, 0x3f);
-			enc28j60Write(EPMM1, 0x30);
-			enc28j60Write(EPMCSL, 0xf9);
-			enc28j60Write(EPMCSH, 0xf7);
-		}
-	
-	
+	enc28j60Write(ERXFCON, ERXFCON_UCEN|ERXFCON_CRCEN|ERXFCON_PMEN);
+	enc28j60Write(EPMM0, 0x3f);
+	enc28j60Write(EPMM1, 0x30);
+	enc28j60Write(EPMCSL, 0xf9);
+	enc28j60Write(EPMCSH, 0xf7);
         //
         //
 	// do bank 2 stuff
@@ -286,23 +283,47 @@ uint8_t enc28j60getrev(void)
 	return(rev);
 }
 
+// dhcp_client.c needs general broadcast
+#ifdef ENC28J60_BROADCAST
+// A number of utility functions to enable/disable general broadcast (not just arp)
+void enc28j60EnableBroadcast( void ) {
+        enc28j60Write(ERXFCON, (uint8_t)((enc28j60Read(ERXFCON) | ERXFCON_BCEN)));
+}
+void enc28j60DisableBroadcast( void ) {
+        enc28j60Write(ERXFCON, enc28j60Read(ERXFCON) & (0xff ^ ERXFCON_BCEN));
+}
+#endif
+
 // link status
 uint8_t enc28j60linkup(void)
 {
-        // bit 10 (= bit 3 in upper reg)
-	return(enc28j60PhyReadH(PHSTAT2) && 4);
+        // PHSTAT1 LLSTAT (= bit 2 in lower reg), PHSTAT1_LLSTAT
+        // LLSTAT is latching, that is: if it was down since last
+        // calling enc28j60linkup then we get first a down indication
+        // and only at the next call to enc28j60linkup it will come up.
+        // This way we can detect intermittened link failures and
+        // that might be what we want.
+        // The non latching version is LSTAT.
+        // PHSTAT2 LSTAT (= bit 10 in upper reg)
+        if (enc28j60PhyRead(PHSTAT2) & (1<<10) ){
+        //if (enc28j60PhyRead(PHSTAT1) & PHSTAT1_LLSTAT){
+                return(1);
+        }
+        return(0);
 }
 
 void enc28j60PacketSend(uint16_t len, uint8_t* packet)
 {
         // Check no transmit in progress
-        while (enc28j60ReadOp(ENC28J60_READ_CTRL_REG, ECON1) & ECON1_TXRTS)
-        {
-                // Reset the transmit logic problem. See Rev. B4 Silicon Errata point 12.
-                if( (enc28j60Read(EIR) & EIR_TXERIF) ) {
-                        enc28j60WriteOp(ENC28J60_BIT_FIELD_SET, ECON1, ECON1_TXRST);
-                        enc28j60WriteOp(ENC28J60_BIT_FIELD_CLR, ECON1, ECON1_TXRST);
-                }
+        while (enc28j60ReadOp(ENC28J60_READ_CTRL_REG, ECON1) & ECON1_TXRTS);
+        // 
+        // Reset the transmit logic problem. Unblock stall in the transmit logic.
+        // See Rev. B4 Silicon Errata point 12.
+        if( (enc28j60Read(EIR) & EIR_TXERIF) ) {
+                enc28j60WriteOp(ENC28J60_BIT_FIELD_SET, ECON1, ECON1_TXRST);
+                enc28j60WriteOp(ENC28J60_BIT_FIELD_CLR, ECON1, ECON1_TXRST);
+                enc28j60WriteOp(ENC28J60_BIT_FIELD_CLR, EIR, EIR_TXERIF); 
+                _delay_loop_2(30000); // 10ms
         }
 	// Set the write pointer to start of transmit buffer area
 	enc28j60Write(EWRPTL, TXSTART_INIT&0xFF);

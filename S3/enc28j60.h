@@ -1,18 +1,20 @@
 /*****************************************************************************
-* vim:sw=8:ts=8:si:et
-*
-* Title      : Microchip ENC28J60 Ethernet Interface Driver
-* Author     : Pascal Stang 
-* Modified by: Guido Socher
-* Copyright: GPL V2
-*
-*This driver provides initialization and transmit/receive
-*functions for the Microchip ENC28J60 10Mb Ethernet Controller and PHY.
-*This chip is novel in that it is a full MAC+PHY interface all in a 28-pin
-*chip, using an SPI interface to the host processor.
-*
-*
-*****************************************************************************/
+ * vim:sw=8:ts=8:si:et
+ *
+ * Title      : Microchip ENC28J60 Ethernet Interface Driver
+ * Author     : Pascal Stang 
+ * Modified by: Guido Socher
+ * Copyright:LGPL V2
+ * See http://www.gnu.org/licenses/old-licenses/lgpl-2.0.html
+ * Based on the enc28j60.c file from the AVRlib library by Pascal Stang.
+ * For AVRlib See http://www.procyonengineering.com/
+ * Used with explicit permission of Pascal Stang.
+ *
+ *This driver provides initialization and transmit/receive
+ *functions for the Microchip ENC28J60 10Mb Ethernet Controller and PHY.
+ *This chip is novel in that it is a full MAC+PHY interface all in a 28-pin
+ *chip, using an SPI interface to the host processor.
+ ****************************************************************************/
 //@{
 
 
@@ -20,6 +22,7 @@
 #define ENC28J60_H
 #include <inttypes.h>
 #include <stdbool.h>
+#include "ip_config.h" // we set this ENC28J60_BROADCAST flag from ip_config.h to have one place with all the code optimisation flags
 
 // ENC28J60 Control Registers
 // Control register definitions are a combination of address,
@@ -258,6 +261,7 @@
 // (note: maximum ethernet frame length would be 1518)
 #define        MAX_FRAMELEN        1500        
 
+
 // functions
 extern uint8_t enc28j60ReadOp(uint8_t op, uint8_t address);
 extern void enc28j60WriteOp(uint8_t op, uint8_t address, uint8_t data);
@@ -268,11 +272,16 @@ extern uint8_t enc28j60Read(uint8_t address);
 extern void enc28j60Write(uint8_t address, uint8_t data);
 extern void enc28j60PhyWrite(uint8_t address, uint16_t data);
 extern void enc28j60clkout(uint8_t clk);
-extern void enc28j60Init(uint8_t* macaddr, bool disablebroadcast);
+extern void enc28j60Init(uint8_t* macaddr, bool bcast);
 extern void enc28j60PacketSend(uint16_t len, uint8_t* packet);
 extern uint8_t enc28j60hasRxPkt(void);
 extern uint16_t enc28j60PacketReceive(uint16_t maxlen, uint8_t* packet);
 extern uint8_t enc28j60getrev(void);
+#ifdef ENC28J60_BROADCAST
+extern void enc28j60EnableBroadcast(void);
+extern void enc28j60DisableBroadcast(void);
+#endif
 extern uint8_t enc28j60linkup(void);
+
 #endif
 //@}

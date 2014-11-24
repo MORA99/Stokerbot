@@ -2,13 +2,13 @@
  * vim:sw=8:ts=8:si:et
  * To use the above modeline in vim you must have "set modeline" in your .vimrc
  * Author: Guido Socher 
- * Copyright: GPL V2
+ * Copyright:LGPL V2
+ * See http://www.gnu.org/licenses/old-licenses/lgpl-2.0.html
  *
  * Based on the net.h file from the AVRlib library by Pascal Stang.
  * For AVRlib See http://www.procyonengineering.com/
  * Used with explicit permission of Pascal Stang.
  *
- * Chip type           : ATMEGA88 with ENC28J60
  *********************************************/
 
 // notation: _P = position of a field
@@ -68,6 +68,8 @@
 #define IP_P 0xe
 #define IP_TOTLEN_H_P 0x10
 #define IP_TOTLEN_L_P 0x11
+#define IP_ID_H_P 0x12
+#define IP_ID_L_P 0x13
 
 #define IP_PROTO_P 0x17  
 

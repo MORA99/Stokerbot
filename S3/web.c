@@ -3,6 +3,12 @@
 #include "I2CEEPROM.h"
 #include "SPILCD.h"
 
+#define TRANS_NUM_GWMAC 1
+#define TRANS_NUM_WWWMAC 2
+
+uint8_t gw_arp_state = 0;
+uint8_t wwwip[4];
+
 uint32_t last_rio_event = 0;
 uint32_t uptime = 0;
 uint16_t timed_events[12*4];
@@ -22,6 +28,8 @@ uint8_t lcd_network_timer = 0;
 
 char host[100];
 char url[125];
+static uint8_t gwmac[6]; 
+static uint8_t wwwmac[6]; 
 
 #if SBNG_TARGET == 50
 extern bool alarmDetected;
@@ -777,7 +785,7 @@ uint16_t print_webpage(uint8_t *buf)
 		sprintf_P(tempbuf, PSTR("\nSystemID: %02X%02X%02X%02X%02X%02X%02X%02X\n"),systemID[0],systemID[1],systemID[2],systemID[3],systemID[4],systemID[5],systemID[6],systemID[7]);
 		plen=fill_tcp_data(buf,plen,tempbuf);
 
-        if (client_waiting_gw()){
+        if (gw_arp_state != 2){
                 plen=fill_tcp_data_p(buf,plen,PSTR("\nwaiting for GW IP to answer arp.\n"));
                 return(plen);
         }
@@ -1116,6 +1124,8 @@ printf_P(PSTR("buf = %s \r\n"), buffer);
 //Bliver kaldt når vi er forbundet til serveren og skal sende GET url...
 uint16_t fill_custom_client_data(uint8_t *bufptr,uint16_t len)
 {
+	
+	printf("Custom filler called \r\n");
 
 	if (start_web_client == 10)
 		return len;
@@ -1204,19 +1214,42 @@ uint16_t fill_custom_client_data(uint8_t *bufptr,uint16_t len)
 	return len;
 }
 
+void arpresolver_result_callback(uint8_t *ip,uint8_t transaction_number,uint8_t *mac)
+{
+	printf("Got ARP reply for %u.%u.%u.%u (%u:%u:%u:%u:%u:%u) \r\n", ip[0],ip[1],ip[2],ip[3], mac[0],mac[1],mac[2],mac[3],mac[4],mac[5]);
+	uint8_t i=0;
+	if (transaction_number==TRANS_NUM_GWMAC){
+		// copy mac address over:
+		while(i<6){gwmac[i]=mac[i];i++;}
+	}
+	if (transaction_number==TRANS_NUM_WWWMAC){
+		// copy mac address over:
+		while(i<6){wwwmac[i]=mac[i];i++;}
+	}	
+}
+
 void handle_net(void)
 {
 	uint16_t dat_p,plen;
 
     // handle ping and wait for a tcp packet
     plen=enc28j60PacketReceive(BUFFER_SIZE, buf);
-    dat_p=packetloop_icmp_tcp(buf,plen);
+	dat_p=packetloop_arp_icmp_tcp(buf,plen);
 
-    if(plen==0){
-            //Hvis der ikke er nogle indgående pakker, køres en tur i web client state machine, hvor dns lookup mv. håndteres
-            if (client_waiting_gw() ){
-                return;
-            }
+    if (gw_arp_state==0){
+		printf("Requested ARP for gateway IP %u.%u.%u.%u\r\n",gwip[0],gwip[1],gwip[2],gwip[3]);
+	    get_mac_with_arp(gwip,TRANS_NUM_GWMAC,&arpresolver_result_callback);
+	    gw_arp_state=1;
+    }
+
+    if (get_mac_with_arp_wait()==0 && gw_arp_state==1){
+	    // done we have the mac address of the GW
+	    gw_arp_state=2;
+    }
+
+
+    if(plen==0 && gw_arp_state==2){
+            //Hvis der ikke er nogle indgående pakker, køres en tur i web client state machine, hvor dns lookup mv. håndteres		
 
             if (dns_state==0){
 					if (web_client_monitor >= 60)
@@ -1231,14 +1264,19 @@ void handle_net(void)
 					printf_P(PSTR("Request DNS lookup for %s\r\n"),host);
                     dnsTimer=tickS;
                     dns_state=1;
-                    dnslkup_request(buf,host);
+					dnslkup_request(buf,host,gwmac);
                     return;
             }
 
             if (dns_state==1 && dnslkup_haveanswer()){
-					printf_P(PSTR("Got dns reply : %d.%d.%d.%d \r\n"),dnslkup_getip()[0],dnslkup_getip()[1],dnslkup_getip()[2],dnslkup_getip()[3]);
+					dnslkup_get_ip(wwwip);
+					printf_P(PSTR("Got dns reply : %d.%d.%d.%d \r\n"),wwwip[0],wwwip[1],wwwip[2],wwwip[3]);
                     dns_state=2;
-			        client_set_wwwip(dnslkup_getip());
+					if (route_via_gw(wwwip)==0)
+					{
+						printf("Dns resolved to local IP, requesting mac address \r\n");
+						get_mac_with_arp(wwwip,TRANS_NUM_WWWMAC,&arpresolver_result_callback);						
+					}
             }
 
             if (dns_state!=2){
@@ -1271,7 +1309,11 @@ void handle_net(void)
 		//Add the static ID to the url, rest of data is added in callback				
 		sprintf_P(tempbuf, PSTR("&id=%02X%02X%02X%02X%02X%02X%02X%02X"), systemID[0], systemID[1], systemID[2], systemID[3], systemID[4], systemID[5], systemID[6], systemID[7]);
 		strcat(url, tempbuf);
-		client_browse_url(url,NULL,host,&browserresult_callback);	
+		//void client_browse_url(const char *urlbuf_p,char *urlbuf_varpart,const char *hoststr,void (*callback)(uint16_t,uint16_t,uint16_t),uint8_t *dstip,uint8_t *dstmac)
+		if (route_via_gw(wwwip)==0) //LAN
+			client_browse_url(url,NULL,host,&browserresult_callback,wwwip,wwwmac);
+		else //WAN
+			client_browse_url(url,NULL,host,&browserresult_callback,wwwip,gwmac);
 	} else if (start_web_client == 10)
 	{
 		dnsTimer=tickS;
@@ -1281,7 +1323,7 @@ void handle_net(void)
 		char *ptr = (char*)tempbuf;
 		sprintf_P(ptr, PSTR("?id=%02X%02X%02X%02X%02X%02X%02X%02X"), systemID[0], systemID[1], systemID[2], systemID[3], systemID[4], systemID[5], systemID[6], systemID[7]);
 		ptr += strlen(ptr);
-		client_browse_url("/getLCD.php",tempbuf,host,&lcd_callback);	
+		client_browse_url("/getLCD.php",tempbuf,host,&lcd_callback,wwwip,gwmac);
 	}
 
     	// reset after a delay to prevent permanent bouncing
@@ -1600,7 +1642,7 @@ bool signed_save_cgivalue_if_found(char* buffer, char* name, uint16_t eeprom_loc
 	return false;
 }
 
-void lcd_callback(uint8_t statuscode,uint16_t datapos, uint16_t len){
+void lcd_callback(uint16_t statuscode,uint16_t datapos, uint16_t len){
 		printf_P(PSTR("got lcd reply ...\r\n"));
         //datapos=0; // supress warning about unused paramter
 		start_web_client=0;
@@ -1664,8 +1706,9 @@ void lcd_callback(uint8_t statuscode,uint16_t datapos, uint16_t len){
 }
 
 //Her skal vi håndtere svaret fra stokerlog, der kan komme SET PIN STATE, LCD LINE TEXT, TIME DDMMYY HHMMSS
-void browserresult_callback(uint8_t statuscode,uint16_t datapos, uint16_t len){
+void browserresult_callback(uint16_t statuscode,uint16_t datapos, uint16_t len){
 		printf_P(PSTR("got reply %u ...\r\n"),statuscode);
+		
         //datapos=0; // supress warning about unused paramter
 		start_web_client=0;
         if (statuscode==0){
