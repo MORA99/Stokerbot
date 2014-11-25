@@ -122,6 +122,12 @@
     <Compile Include="timeout.h">
       <SubType>compile</SubType>
     </Compile>
+    <Compile Include="webFiles.c">
+      <SubType>compile</SubType>
+    </Compile>
+    <Compile Include="webFiles.h">
+      <SubType>compile</SubType>
+    </Compile>
     <Compile Include="websrv_help_functions.h">
       <SubType>compile</SubType>
     </Compile>

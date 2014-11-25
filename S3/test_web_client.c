@@ -1,8 +1,12 @@
 /************************************************************************
-2.15 Changelog
+2.20 Changelog
 * Alle 8 alarmer virker nu
 * Tilføjet ajax save funktion til alarm siden, så den ikke reloader for hver alarm.
-
+* Ny netværks stack
+* Tilføjet DHCP funktion
+* DHCP er nu standard configuration
+* export.json tilføjet som en json version af export.htm
+* webfiles flyttet til egen fil
 
 ************************************************************************/
 
@@ -304,7 +308,7 @@ int main(void){
 
 		eepromWriteWord(23, 80);  //web port
 		eepromWriteByte(25, 0); //Done Disable Broadcast
-		eepromWriteByte(10, 0);  //dhcp off
+		eepromWriteByte(10, 1);  //dhcp on
 		eepromWriteByte(50, 0);  //no LCD
 
 		save_ip_addresses();

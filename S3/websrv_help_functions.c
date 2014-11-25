@@ -61,7 +61,7 @@ NEXT:
         }
         // return 1 if found (the string in strbuf might still be an empty string)
         // otherwise return 0
-        return(found);
+        return i;
 }
 
 // convert a single hex digit character to its integer value
