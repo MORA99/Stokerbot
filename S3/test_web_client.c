@@ -7,6 +7,7 @@
 * DHCP er nu standard configuration
 * export.json tilføjet som en json version af export.htm
 * webfiles flyttet til egen fil
+* IP og evt. andet data sendes til boxdata.php, som viser det under enheder, bl.a. for at finde bottens lokale ip når den bruger DHCP.
 
 ************************************************************************/
 
@@ -498,6 +499,7 @@ int main(void){
         client_ifconfig(myip,netmask);
         printf("IP : %u.%u.%u.%u \r\n",myip[0],myip[1],myip[2],myip[3]);
 		printf("GW : %u.%u.%u.%u \r\n",gwip[0],gwip[1],gwip[2],gwip[3]);
+		save_ip_addresses(); //Makes bootloader use the IP we obtained from DHCP
 	}
 
 
@@ -745,7 +747,7 @@ static void timedSaveEeprom(void)
 	}
 }
 
-//Called every 20ms
+//Called every 2ms from ISR
 void updateCounters(void)
 {
 	#if SBNG_TARGET == 50

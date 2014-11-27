@@ -19,9 +19,9 @@
 //#define HTTPD_DEBUG
 //#define OW_DEBUG     //Enable printf debugs from onewire
 
-#define BUFFER_SIZE 1600 //was 800
+#define BUFFER_SIZE 1600
 
-#define MAXSENSORS 30 //tempbuf der bruges i sensorScan kan maks holde 31sensore, buffer der bruges ved afseldelse max 35sensore
+#define MAXSENSORS 50 
 #define SENSORSIZE 11
 #define NUMALARMS 8
 
@@ -30,7 +30,7 @@ enum SensorData { FAMILY, ID1, ID2, ID3, ID4, ID5, ID6, CRC, VALUE1, VALUE2, SIG
 
 uint8_t sensorValues[MAXSENSORS*SENSORSIZE];
 uint8_t *sensorScan; //peger på tempbuf
-char tempbuf[4096]; //was 512
+char tempbuf[4096];
 
 //8ADC+4digital for at der er plads til de digitale hvis de er input
 volatile uint16_t simpleSensorValues[100];

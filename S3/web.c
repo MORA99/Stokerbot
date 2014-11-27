@@ -32,6 +32,9 @@ char url[125];
 static uint8_t gwmac[6]; 
 static uint8_t wwwmac[6]; 
 
+uint8_t sendBoxData=0;
+uint8_t httpType = 0;
+
 #if SBNG_TARGET == 50
 extern bool alarmDetected;
 extern uint8_t alarmTimeout;
@@ -782,10 +785,7 @@ printf_P(PSTR("buf = %s \r\n"), buffer);
 //Bliver kaldt når vi er forbundet til serveren og skal sende GET url...
 uint16_t fill_custom_client_data(uint8_t *bufptr,uint16_t len)
 {
-	
-	printf("Custom filler called \r\n");
-
-	if (start_web_client == 10)
+	if (httpType != 1)
 		return len;
 
 #if SBNG_TARGET == 50
@@ -950,32 +950,51 @@ void handle_net(void)
 
             //----------
             if (start_web_client==1){
-				printf_P(PSTR("Starting webclient request \r\n"));
-					eepromReadStr(1000, host, 99);
-					eepromReadStr(1100, url, 99);				
+				if (sendBoxData == 0)
+				{
+					eepromReadStr(1000, host, 99);				
+					start_web_client=2;
+					httpType = 2;
 					
-                    dnsTimer=tickS;
-                    start_web_client=2;
-                    web_client_attempts++;
-					web_client_monitor++;
-					if (web_client_monitor >= 5)
-					{
-						printf("Reset due to missing webclient");
-						while(true);
-					}
+					//Add the static ID to the url, rest of data is added in callback
+					sprintf_P(url, PSTR("/boxdata.php?id=%02X%02X%02X%02X%02X%02X%02X%02X&ip=%u.%u.%u.%u"), systemID[0], systemID[1], systemID[2], systemID[3], systemID[4], systemID[5], systemID[6], systemID[7], myip[0], myip[1], myip[2], myip[3]);
+					//void client_browse_url(const char *urlbuf_p,char *urlbuf_varpart,const char *hoststr,void (*callback)(uint16_t,uint16_t,uint16_t),uint8_t *dstip,uint8_t *dstmac)
+					if (route_via_gw(wwwip)==0) //LAN
+						client_browse_url(url,NULL,host,&boxcallback,wwwip,wwwmac);
+					else //WAN
+						client_browse_url(url,NULL,host,&boxcallback,wwwip,gwmac);					
+					sendBoxData=30;
+				} else {
+					sendBoxData--;
+					printf_P(PSTR("Starting webclient request \r\n"));
+						eepromReadStr(1000, host, 99);
+						eepromReadStr(1100, url, 99);				
+					
+						dnsTimer=tickS;
+						start_web_client=2;
+						httpType = 1;
+						web_client_attempts++;
+						web_client_monitor++;
+						if (web_client_monitor >= 5)
+						{
+							printf("Reset due to missing webclient");
+							while(true);
+						}
 	
-		//Add the static ID to the url, rest of data is added in callback				
-		sprintf_P(tempbuf, PSTR("&id=%02X%02X%02X%02X%02X%02X%02X%02X"), systemID[0], systemID[1], systemID[2], systemID[3], systemID[4], systemID[5], systemID[6], systemID[7]);
-		strcat(url, tempbuf);
-		//void client_browse_url(const char *urlbuf_p,char *urlbuf_varpart,const char *hoststr,void (*callback)(uint16_t,uint16_t,uint16_t),uint8_t *dstip,uint8_t *dstmac)
-		if (route_via_gw(wwwip)==0) //LAN
-			client_browse_url(url,NULL,host,&browserresult_callback,wwwip,wwwmac);
-		else //WAN
-			client_browse_url(url,NULL,host,&browserresult_callback,wwwip,gwmac);
+				//Add the static ID to the url, rest of data is added in callback				
+				sprintf_P(tempbuf, PSTR("&id=%02X%02X%02X%02X%02X%02X%02X%02X"), systemID[0], systemID[1], systemID[2], systemID[3], systemID[4], systemID[5], systemID[6], systemID[7]);
+				strcat(url, tempbuf);
+				//void client_browse_url(const char *urlbuf_p,char *urlbuf_varpart,const char *hoststr,void (*callback)(uint16_t,uint16_t,uint16_t),uint8_t *dstip,uint8_t *dstmac)
+				if (route_via_gw(wwwip)==0) //LAN
+					client_browse_url(url,NULL,host,&browserresult_callback,wwwip,wwwmac);
+				else //WAN
+					client_browse_url(url,NULL,host,&browserresult_callback,wwwip,gwmac);
+			}
 	} else if (start_web_client == 10)
 	{
 		dnsTimer=tickS;
         start_web_client=2;
+		httpType = 3;
 
 		printf_P(PSTR("Starting lcd request \r\n"));
 		char *ptr = (char*)tempbuf;
@@ -1379,6 +1398,10 @@ void lcd_callback(uint16_t statuscode,uint16_t datapos, uint16_t len){
 					if (strlen(datapos) < 80) break;
 				}
 		}
+}
+
+void boxcallback(uint16_t statuscode,uint16_t datapos, uint16_t len) {
+	
 }
 
 //Her skal vi håndtere svaret fra stokerlog, der kan komme SET PIN STATE, LCD LINE TEXT, TIME DDMMYY HHMMSS

@@ -1219,6 +1219,7 @@ uint16_t www_client_internal_datafill_callback(uint8_t fd){
                         len=fill_tcp_data_p(bufptr,len,PSTR("\r\nContent-Type: application/x-www-form-urlencoded\r\n\r\n"));
                         len=fill_tcp_data(bufptr,len,client_postval);
                 }
+				printf("HTTP client len %u \r\n",len);
                 return(len);
         }
         return(0);
