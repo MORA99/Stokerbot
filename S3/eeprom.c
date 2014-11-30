@@ -21,6 +21,14 @@ void eepromSaveWord(uint16_t pos, uint16_t value)
 	}
 }
 
+void eepromSaveDword(uint16_t pos, uint32_t value)
+{
+	if (eepromReadDword(pos) != value)
+	{
+		eeprom_write_dword((uint32_t*)pos, value);
+	}
+}
+
 int8_t eepromReadByteSigned(uint16_t pos)
 {
 	return eeprom_read_byte((uint8_t*)pos);
@@ -34,6 +42,11 @@ uint8_t eepromReadByte(uint16_t pos)
 uint16_t eepromReadWord(uint16_t pos)
 {
 	return eeprom_read_word((uint16_t*)pos);
+}
+
+uint32_t eepromReadDword(uint16_t pos)
+{
+	return eeprom_read_dword((uint32_t*)pos);
 }
 
 void eepromSaveStr(uint16_t pos, char* target, uint8_t limit)

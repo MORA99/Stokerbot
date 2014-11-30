@@ -8,12 +8,10 @@
 #include <string.h>
 
 extern PROGMEM const char fmu_js[];
-extern PROGMEM const char fmu2_js[];
 extern PROGMEM const char webclient_htm[];
 extern PROGMEM const char alarms_htm[];
 extern PROGMEM const char alarms_js[];
 extern PROGMEM const char microajax_minified_js[];
-extern PROGMEM const char loader_js[];
 extern PROGMEM const char style_css[];
 
 #endif

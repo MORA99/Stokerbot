@@ -42,7 +42,7 @@ uint16_t fill_custom_client_data(uint8_t *bufptr,uint16_t len);
  uint16_t print_settings_webpage(uint8_t *buf);
  uint16_t print_settings_io_webpage(uint8_t *buf);
  uint16_t print_fmu_webpage(uint8_t *buf);
- uint16_t print_fmu2_webpage(uint8_t *buf);
+ uint16_t print_loader(uint8_t *buf);
 
  void handle_net(void);
  bool save_cgivalue_if_found(char* buffer, char* name, uint16_t eeprom_location);

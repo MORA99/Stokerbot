@@ -266,28 +266,28 @@ uint16_t print_export_htm(uint8_t *buf)
 	//Analog pins
 	for (uint8_t i=0; i<=7; i++)
 	{
-		sprintf_P(tempbuf, PSTR("A%u %u\r\n"),i,simpleSensorValues[i]);
+		sprintf_P(tempbuf, PSTR("A%u %lu\r\n"),i,simpleSensorValues[i]);
 		plen = fill_tcp_data(buf,plen,tempbuf);
 	}
 
 	//Digital pins
 	for (uint8_t i=0; i<=3; i++)
 	{
-		sprintf_P(tempbuf, PSTR("D%u %u\r\n"),i,simpleSensorValues[i+8]);
+		sprintf_P(tempbuf, PSTR("D%u %lu\r\n"),i,simpleSensorValues[i+8]);
 		plen = fill_tcp_data(buf,plen,tempbuf);
 	}
 	#if SBNG_TARGET == 50
 	//Relay states
 	for (uint8_t i=24; i<=27; i++)
 	{
-		sprintf_P(tempbuf, PSTR("RL%u %u\r\n"),i,simpleSensorValues[i]);
+		sprintf_P(tempbuf, PSTR("RL%u %lu\r\n"),i,simpleSensorValues[i]);
 		plen = fill_tcp_data(buf,plen,tempbuf);
 	}
 
 	//Opto states
 	for (uint8_t i=20; i<=23; i++)
 	{
-		sprintf_P(tempbuf, PSTR("OP%u %u\r\n"),i,simpleSensorValues[i]);
+		sprintf_P(tempbuf, PSTR("OP%u %lu\r\n"),i,simpleSensorValues[i]);
 		plen = fill_tcp_data(buf,plen,tempbuf);
 	}
 	#endif
@@ -369,28 +369,28 @@ uint16_t print_export_json(uint8_t *buf)
 	//Analog pins
 	for (uint8_t i=0; i<=7; i++)
 	{
-		sprintf_P(tempbuf, PSTR("\"A%u\":%u,\r\n"),i,simpleSensorValues[i]);
+		sprintf_P(tempbuf, PSTR("\"A%u\":%lu,\r\n"),i,simpleSensorValues[i]);
 		plen = fill_tcp_data(buf,plen,tempbuf);
 	}
 
 	//Digital pins
 	for (uint8_t i=0; i<=3; i++)
 	{
-		sprintf_P(tempbuf, PSTR("\"D%u\":%u,\r\n"),i,simpleSensorValues[i+8]);
+		sprintf_P(tempbuf, PSTR("\"D%u\":%lu,\r\n"),i,simpleSensorValues[i+8]);
 		plen = fill_tcp_data(buf,plen,tempbuf);
 	}
 	#if SBNG_TARGET == 50
 	//Relay states
 	for (uint8_t i=24; i<=27; i++)
 	{
-		sprintf_P(tempbuf, PSTR("\"RL%u\":%u,\r\n"),i,simpleSensorValues[i]);
+		sprintf_P(tempbuf, PSTR("\"RL%u\":%lu,\r\n"),i,simpleSensorValues[i]);
 		plen = fill_tcp_data(buf,plen,tempbuf);
 	}
 
 	//Opto states
 	for (uint8_t i=20; i<=23; i++)
 	{
-		sprintf_P(tempbuf, PSTR("\"OP%u\":%u,\r\n"),i,simpleSensorValues[i]);
+		sprintf_P(tempbuf, PSTR("\"OP%u\":%lu,\r\n"),i,simpleSensorValues[i]);
 		plen = fill_tcp_data(buf,plen,tempbuf);
 	}
 	#endif
@@ -622,27 +622,46 @@ uint16_t print_webclient_webpage(uint8_t *buf)
 
 uint16_t print_settings_general_webpage(uint8_t *buf)
 {
-        uint16_t plen;
+	uint16_t plen;
 
-		plen=http200ok();
-        plen=fill_tcp_data_p(buf,plen,PSTR("<SCRIPT SRC='/loader.js'></SCRIPT><script>menu(2,1);formstart('/settings/general');"));
+	plen=http200ok();
+	plen=fill_tcp_data_p(buf,plen,PSTR("<SCRIPT SRC='/loader.js'></SCRIPT><script>menu(2,1);formstart('/settings/general');"));
 
-		char realpassword[11];
-		eepromReadStr(200, realpassword, 10);      
-		sprintf_P(tempbuf, PSTR("dw('Password : ');tf('PASS', '%s', 10);dw('<br>');"), realpassword);
-		plen=fill_tcp_data(buf,plen,tempbuf);
+	char realpassword[11];
+	eepromReadStr(200, realpassword, 10);
+	sprintf_P(tempbuf, PSTR("dw('Password : ');tf('PASS', '%s', 10);dw('<br>');"), realpassword);
+	plen=fill_tcp_data(buf,plen,tempbuf);
 
-		uint8_t hasLcd = eepromReadByte(50);
-		sprintf_P(tempbuf, PSTR("dw('LCD : ');cb('LCD', '%u', 1);dw('<br>');"), hasLcd);
-		plen=fill_tcp_data(buf,plen,tempbuf);
+	uint8_t hasLcd = eepromReadByte(50);
+	sprintf_P(tempbuf, PSTR("dw('LCD : ');cb('LCD', '%u', 1);dw('<br>');"), hasLcd);
+	plen=fill_tcp_data(buf,plen,tempbuf);
 
-		sprintf_P(tempbuf, PSTR("formend();</script><br>"));
-		plen=fill_tcp_data(buf,plen,tempbuf);
+	sprintf_P(tempbuf, PSTR("formend();</script><br>"));
+	plen=fill_tcp_data(buf,plen,tempbuf);
 
-		//Debug for at se hvor tæt vi er på grænsen (buffer size - lidt)
-		printf_P(PSTR("Plen is %d \r\n"), plen);
+	//Debug for at se hvor tæt vi er på grænsen (buffer size - lidt)
+	printf_P(PSTR("Plen is %d \r\n"), plen);
 
-        return(plen);
+	return(plen);
+}
+
+uint16_t print_loader(uint8_t *buf)
+{
+	uint16_t plen;
+
+	plen=http200ok();
+	plen=fill_tcp_data_p(buf,plen,PSTR("function require(jspath) { document.write('<script type=\"text/javascript\" src=\"'+jspath+'\"></script>'); }"));
+	plen=fill_tcp_data_p(buf,plen,PSTR("require(\"/fmu.js\");require(\"/alist.js\");require(\"/alarms.js\");require(\"/slist.js\");"));
+	plen=fill_tcp_data_p(buf,plen,PSTR("document.write('<link rel=\"stylesheet\" type=\"text/css\" href=\"/style.css\"/>');"));
+	
+	sprintf_P(tempbuf, PSTR("function menu(major,minor) {dw('<div id=\"header\">Stokerbot S3 - Firmware %u.%u<br><a href=\"/\">Home</a>&nbsp;&nbsp;&nbsp;');"), SBNG_VERSION_MAJOR,SBNG_VERSION_MINOR);
+	plen=fill_tcp_data(buf,plen,tempbuf);
+	
+	plen=fill_tcp_data_p(buf,plen,PSTR("dw('<a href=\"/settings/general/\">Settings<a>&nbsp;&nbsp;&nbsp;<a href=\"/settings/net/\">Network</a>&nbsp;&nbsp;&nbsp;<a href=\"/settings/webclient/\">Uploader</a>');"));
+	plen=fill_tcp_data_p(buf,plen,PSTR("dw('&nbsp;&nbsp;&nbsp;<a href=\"/settings/io/\">I/O</a>&nbsp;&nbsp;&nbsp;<a href=\"/settings/alarm/\">Alarms</a></div><br><center>');}"));	
+	
+printf_P(PSTR("Plen is %d \r\n"), plen);
+	return(plen);
 }
 
 uint16_t print_settings_webpage(uint8_t *buf)
@@ -685,22 +704,35 @@ uint16_t print_settings_webpage(uint8_t *buf)
         return(plen);
 }
 
+uint16_t print_redirect(uint8_t *buf, char* path)
+{
+	uint16_t plen;
+
+	plen=http200ok();
+	sprintf_P(tempbuf, PSTR("<meta http-equiv='refresh' content='600;url=%s'>"), path);
+	plen=fill_tcp_data(buf,plen,tempbuf);
+
+	return(plen);
+}
+
 uint16_t print_settings_io_webpage(uint8_t *buf)
 {
         uint16_t plen;
 
 		plen=http200ok();
-        plen=fill_tcp_data_p(buf,plen,PSTR("<SCRIPT SRC='/loader.js'></SCRIPT><script>menu(2,1);formstart('/settings/io');tfh('io','1',0);dw('<table border=0>');"));
+        plen=fill_tcp_data_p(buf,plen,PSTR("<SCRIPT SRC='/loader.js'></SCRIPT><script>menu(2,1);formstart('/settings/io');tfh('io','1',0);dw('<table border=0><thead><tr><th>Pin</th><th>Type</th><th>Pullup?</th></tr></thead>');"));
     
 	  	for (uint8_t i=0; i<8; i++)
 		{
-			sprintf_P(tempbuf, PSTR("adcset(%d, 'ADC%d', %d);"),i,i,simpleSensorTypes[i]);
+			uint8_t val = eepromReadByte(300 + i);
+			sprintf_P(tempbuf, PSTR("adcset(%d, 'ADC%d', %d, 'PUA%d', %d);"),i,i,simpleSensorTypes[i],i,val);
 			plen=fill_tcp_data(buf,plen,tempbuf);
 		}
 
 	  	for (uint8_t i=0; i<4; i++)
 		{
-			sprintf_P(tempbuf, PSTR("dport(%d, 'D%d', %d);"),i,i,simpleSensorTypes[i+8]);
+			uint8_t val = eepromReadByte(310 + i);
+			sprintf_P(tempbuf, PSTR("dport(%d, 'D%d', %d , 'PUD%d', %d);"),i,i,simpleSensorTypes[i+8],i,val);
 			plen=fill_tcp_data(buf,plen,tempbuf);
 		}
 
@@ -795,26 +827,26 @@ uint16_t fill_custom_client_data(uint8_t *bufptr,uint16_t len)
 
 	for (uint8_t i=0; i<8; i++)
 	{
-		sprintf_P(tempbuf, PSTR("&ADC%u=%u"), i, simpleSensorValues[i]);
+		sprintf_P(tempbuf, PSTR("&ADC%u=%lu"), i, simpleSensorValues[i]);
 		len = fill_tcp_data(bufptr,len,tempbuf);
 	}
 
 	for (uint8_t i=0; i<4; i++)
 	{
-		sprintf_P(tempbuf, PSTR("&D%u=%u"), i, simpleSensorValues[i+8]);
+		sprintf_P(tempbuf, PSTR("&D%u=%lu"), i, simpleSensorValues[i+8]);
 		len = fill_tcp_data(bufptr,len,tempbuf);
 	}
 
 #if SBNG_TARGET == 50
 	for (uint8_t i=20; i<24; i++)
 	{
-		sprintf_P(tempbuf, PSTR("&O%u=%u"), i, simpleSensorValues[i]);
+		sprintf_P(tempbuf, PSTR("&O%u=%lu"), i, simpleSensorValues[i]);
 		len = fill_tcp_data(bufptr,len,tempbuf);
 	}
 
 	for (uint8_t i=24; i<28; i++)
 	{
-		sprintf_P(tempbuf, PSTR("&R%u=%u"), i, simpleSensorValues[i]);
+		sprintf_P(tempbuf, PSTR("&R%u=%lu"), i, simpleSensorValues[i]);
 		len = fill_tcp_data(bufptr,len,tempbuf);
 	}
 #endif
@@ -1059,24 +1091,20 @@ void handle_net(void)
 				{
 					sprintf_P(tempbuf, PSTR("ADC%u"), i);
 					save_cgivalue_if_found((char*)&(buf[dat_p+4]), tempbuf, 100+i);
+					sprintf_P(tempbuf, PSTR("PUA%u"), i);
+					save_checkbox_cgivalue((char*)&(buf[dat_p+4]), tempbuf, 300+i);
 				}
 
 				for (uint8_t i=0; i<4; i++)
 				{
 					sprintf_P(tempbuf, PSTR("D%u"), i);
 					save_cgivalue_if_found((char*)&(buf[dat_p+4]), tempbuf, 110+i);
+					sprintf_P(tempbuf, PSTR("PUD%u"), i);
+					save_checkbox_cgivalue((char*)&(buf[dat_p+4]), tempbuf, 310+i);					
 				}
 
-				//Reload from eeprom
-				for (int i=0; i<=7; i++)
-				{
-					simpleSensorTypes[i] = eepromReadByte(100+i);
-				}
-
-				for (int i=0; i<=3; i++)
-				{
-					simpleSensorTypes[i+8] = eepromReadByte(110+i);
-				}
+		        dat_p=print_redirect(buf, "/settings/io");
+	            goto SENDTCPANDDIE;
 			}
 
             dat_p=print_settings_io_webpage(buf);
@@ -1116,10 +1144,6 @@ void handle_net(void)
 			save_cgivalue_if_found((char*)&(buf[dat_p+4]), "DNS3", 34);
 
 			while(true);  //causes watchdog to reset the avr
-
-            dat_p=print_settings_webpage(buf);
-
-          	goto SENDTCP;
 		} else if (strncmp_P((char *)&(buf[dat_p+4]),PSTR("/settings/net"),13)==0){
 		if (!user_is_auth((char *)&(buf[dat_p+4])))
 		{
@@ -1131,11 +1155,11 @@ void handle_net(void)
 
 		goto SENDTCP;			  
 	} else if (strncmp_P((char *)&(buf[dat_p+4]),PSTR("/settings/alarm"),15)==0){	
-			/*if (!user_is_auth((char *)&(buf[dat_p+4])))
+			if (!user_is_auth((char *)&(buf[dat_p+4])))
 			{
 				dat_p=https401();
           		goto SENDTCP;
-			}*/
+			}
 
 			dat_p=print_flash_webpage(true, alarms_htm, buf);
 
@@ -1219,17 +1243,12 @@ void handle_net(void)
 			dat_p=print_flash_webpage(true, fmu_js, buf);
 
           	goto SENDTCP;
-    } else if (strncmp_P((char *)&(buf[dat_p+4]),PSTR("/fmu2.js"),8)==0){	
-            dat_p=print_flash_webpage(true, fmu2_js, buf);
-
-          	goto SENDTCP;
     } else if (strncmp_P((char *)&(buf[dat_p+4]),PSTR("/alarms.js"),10)==0){	
             dat_p=print_flash_webpage(true, alarms_js, buf);
 
           	goto SENDTCP;
     } else if (strncmp_P((char *)&(buf[dat_p+4]),PSTR("/loader.js"),10)==0){	
-            dat_p=print_flash_webpage(true, loader_js, buf);
-
+            dat_p=print_loader(buf);
           	goto SENDTCP;
     } else if (strncmp_P((char *)&(buf[dat_p+4]),PSTR("/slist.js"),9)==0){	
             dat_p=print_sensorlist(buf);
@@ -1257,6 +1276,10 @@ void handle_net(void)
             goto SENDTCP;
     }
     //
+
+	SENDTCPANDDIE:
+	www_server_reply(buf,dat_p); // send data
+	while(true);
 
 	SENDTCP:
     www_server_reply(buf,dat_p); // send data

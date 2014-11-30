@@ -4,7 +4,7 @@
   #include "config.h"
   #include "AVR035.h"
 
-#define EEPROM_VERSION 3
+#define EEPROM_VERSION 4
 #define SBNG_VERSION_MAJOR 2
 #define SBNG_VERSION_MINOR 20
 
@@ -33,7 +33,7 @@ uint8_t *sensorScan; //peger på tempbuf
 char tempbuf[4096];
 
 //8ADC+4digital for at der er plads til de digitale hvis de er input
-volatile uint16_t simpleSensorValues[100];
+volatile uint32_t simpleSensorValues[100];
 uint8_t simpleSensorTypes[100];
 uint8_t simpleSensorDebounce[100];
 

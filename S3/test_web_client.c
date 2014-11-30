@@ -8,7 +8,9 @@
 * export.json tilføjet som en json version af export.htm
 * webfiles flyttet til egen fil
 * IP og evt. andet data sendes til boxdata.php, som viser det under enheder, bl.a. for at finde bottens lokale ip når den bruger DHCP.
-
+* Svag intern pullup kan aktiveres under IO nu
+* fmu2 lagt sammen med fmu.js, loader.js flyttet til progammet
+* 
 ************************************************************************/
 
 
@@ -34,24 +36,17 @@
 #include "dht.h"
 
 #include "web.h"
-
 #include "usart.h"
-
 #include "onewire.h"
 #include "ds18x20.h"
-
 #include "analog.h"
-
 #include "eeprom.h"
 #include "base64_dec.h"
 #include "timer.h"
-
 #include "SPILCD.h"
 #include "I2CEEPROM.h"
 #include "twi.h"
-
 #include "Queue.h"
-
 #include "dhcp_client.h"
 
 #if SBNG_TARGET == 50
@@ -202,7 +197,7 @@ void loadSimpleSensorData()
 
 		if (simpleSensorTypes[i] == 3) //counter
 		{
-			uint8_t eepos = 140 + (i*2);
+			uint8_t eepos = 2000 + (i*4);
 			simpleSensorValues[i] = eepromReadWord(eepos);
 		} else {
 			simpleSensorValues[i] = 0;
@@ -218,7 +213,7 @@ void loadSimpleSensorData()
 
 		if (simpleSensorTypes[i+8] == 3) //counter
 		{
-			uint8_t eepos = 160 + (i*2);
+			uint8_t eepos = 2500 + (i*4);
 			simpleSensorValues[i+8] = eepromReadWord(eepos);
 		} else {
 			simpleSensorValues[i+8] = 0;
@@ -335,6 +330,9 @@ int main(void){
 		eepromWriteByte(111, 0); //Digital port 1 = OUT
 		eepromWriteByte(112, 0); //Digital port 2 = OUT
 		eepromWriteByte(113, 0); //Digital port 3 = OUT	
+		
+		for (uint8_t i=0; i<20; i++)
+			eepromWriteByte(300+i, 0); //Pullup disabled
 
 		for (uint8_t alarm=1; alarm<=NUMALARMS; alarm++)
 		{
@@ -374,14 +372,28 @@ int main(void){
 	}
 
 	if (eepromReadByte(2) < 3)
-	{
-		eepromWriteByte(1, EEPROM_VERSION);	
+	{	
 		eepromWriteWord(29, 80);  //web port
 		eepromWriteByte(25, 0); //Dont disable broadcast
 		eepromWriteByte(1200, 3); //Interval 3=30sec
 		eepromWriteStr(1000, "stokerlog.dk", 13); //host
-		eepromWriteStr(1100, "/incoming.php?v=1", 18); //url	
+		eepromWriteStr(1100, "/incoming.php?v=1", 18); //url
 	}
+	
+	//Expand to 32bit sensor values
+	if (eepromReadByte(2) < 4)
+	{
+		for (uint8_t i=0; i<7; i++)
+		{
+			eepromSaveDword(2000 + i*4, eepromReadWord(140+i*2));
+		}
+		for (uint8_t i=0; i<3; i++)
+		{
+			eepromSaveDword(2500 + i*4, eepromReadWord(160+i*2));
+		}		
+	}	
+
+		eepromWriteByte(1, EEPROM_VERSION);
 
 		read_ip_addresses();
 		uint16_t webport = eepromReadWord(23);  //web port
@@ -511,6 +523,16 @@ int main(void){
 		twiInit(10); //200ms timeout
 		loadSimpleSensorData();
 
+		//Set analog pullups
+		for (uint8_t i=0; i<=8; i++)
+		{
+			if (eepromReadByte(300 + i) == 1)
+			{
+				SETBIT(PORTA, i); //Enable pullup
+			}
+		}
+
+
 		//Set digital pins based on selections...
 		for (uint8_t i=8; i<=11; i++)
 		{
@@ -521,6 +543,10 @@ int main(void){
 			} else {
 				//input
 				CLEARBIT(DDRC, (i-6));
+				if (eepromReadByte(310 + (i-8)) == 1)
+				{
+					SETBIT(PORTC, (i-6)); //Enable pullup
+				}
 			}
 		}
 
@@ -740,11 +766,20 @@ static void timedSaveEeprom(void)
 	{
 		if (simpleSensorTypes[i] == 3) //counter
 		{
-			uint8_t pos = 110 + (i*2);
+			uint8_t pos = 2000 + (i*4);
 			//save tjekker selv om det er nødvendigt
-			eepromSaveWord(pos, simpleSensorValues[i]);
+			eepromSaveDword(pos, simpleSensorValues[i]);
 		}
 	}
+	for (uint8_t i=0; i<4; i++)
+	{
+		if (simpleSensorTypes[i+8] == 3) //counter
+		{
+			uint8_t pos = 2500 + (i*4);
+			//save tjekker selv om det er nødvendigt
+			eepromSaveDword(pos, simpleSensorValues[i]);
+		}
+	}	
 }
 
 //Called every 2ms from ISR
