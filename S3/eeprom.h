@@ -2,16 +2,28 @@
 #include <stdint.h>
 
 /*
-	1		55 if eeprom contains settings, FF if new eeprom, anything else if foeing/corrupted eeprom
+	0		Empty setting test
+	1		EEprom version
 	10		dhcp
 	11-14 	my ip
  	15-18	gateway
 	19-22	netmask
 	23(-24)	web-port (unused)
 	25		Disable broadcast
-	50		LCD enabled (51-59 reserved for future)
 	31-34	dns server
-
+	50		LCD enabled (51-59 reserved for future)
+	
+	60		Analog interval
+	61		Digital interval
+	62		Onewire interval
+	63		DHT interval
+	64
+	65
+	66
+	67
+	68
+	69
+	
 	100-107	analog sensor types
 	110-113	digital sensor types, may expand in future
 		

@@ -179,9 +179,6 @@
     <Compile Include="lcd_logic.h">
       <SubType>compile</SubType>
     </Compile>
-    <Compile Include="test_web_client.h">
-      <SubType>compile</SubType>
-    </Compile>
     <Compile Include="MCP23008.h">
       <SubType>compile</SubType>
     </Compile>

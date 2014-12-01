@@ -35,6 +35,9 @@ static uint8_t wwwmac[6];
 uint8_t sendBoxData=0;
 uint8_t httpType = 0;
 
+extern void reScheduleTasks();
+extern void timedSaveEeprom();
+
 #if SBNG_TARGET == 50
 extern bool alarmDetected;
 extern uint8_t alarmTimeout;
@@ -635,6 +638,29 @@ uint16_t print_settings_general_webpage(uint8_t *buf)
 	uint8_t hasLcd = eepromReadByte(50);
 	sprintf_P(tempbuf, PSTR("dw('LCD : ');cb('LCD', '%u', 1);dw('<br>');"), hasLcd);
 	plen=fill_tcp_data(buf,plen,tempbuf);
+	
+	/*
+	60		Analog interval
+	61		Digital interval
+	62		Onewire interval
+	63		DHT interval
+	*/	
+	
+	uint8_t digital = eepromReadByte(60);
+	sprintf_P(tempbuf, PSTR("dw('Digital update interval : ');tf('digital', '%u');dw('<br>');"), digital);
+	plen=fill_tcp_data(buf,plen,tempbuf);
+	
+	uint8_t analog  = eepromReadByte(61);
+	sprintf_P(tempbuf, PSTR("dw('Analog update interval : ');tf('analog', '%u');dw('<br>');"), analog);
+	plen=fill_tcp_data(buf,plen,tempbuf);
+
+	uint8_t onewire = eepromReadByte(62);
+	sprintf_P(tempbuf, PSTR("dw('1-wire update interval : ');tf('onewire', '%u');dw('<br>');"), onewire);
+	plen=fill_tcp_data(buf,plen,tempbuf);
+	
+	uint8_t dht = eepromReadByte(63);
+	sprintf_P(tempbuf, PSTR("dw('DHT update interval : ');tf('dht', '%u');dw('<br>');"), dht);
+	plen=fill_tcp_data(buf,plen,tempbuf);		
 
 	sprintf_P(tempbuf, PSTR("formend();</script><br>"));
 	plen=fill_tcp_data(buf,plen,tempbuf);
@@ -709,7 +735,7 @@ uint16_t print_redirect(uint8_t *buf, char* path)
 	uint16_t plen;
 
 	plen=http200ok();
-	sprintf_P(tempbuf, PSTR("<meta http-equiv='refresh' content='600;url=%s'>"), path);
+	sprintf_P(tempbuf, PSTR("<h2>Settings saved, restarting, please wait ...</h2><meta http-equiv='refresh' content='15;url=%s'>"), path);
 	plen=fill_tcp_data(buf,plen,tempbuf);
 
 	return(plen);
@@ -950,11 +976,18 @@ void handle_net(void)
 
 					web_client_monitor++;
 					eepromReadStr(1000, host, 99);
-					eepromReadStr(1100, url, 99);					
-					printf_P(PSTR("Request DNS lookup for %s\r\n"),host);
-                    dnsTimer=tickS;
-                    dns_state=1;
-					dnslkup_request(buf,host,gwmac);
+					eepromReadStr(1100, url, 99);
+
+					if (parse_ip(wwwip,host)!=0)
+					{
+						printf_P(PSTR("Request DNS lookup for %s\r\n"),host);
+						dnsTimer=tickS;
+						dns_state=1;
+						dnslkup_request(buf,host,gwmac);
+					} else {
+						printf_P(PSTR("WWW host is an IP : %u.%u.%u.%u\r\n"),wwwip[0],wwwip[1],wwwip[2],wwwip[3]);
+						dns_state=2;
+					}
                     return;
             }
 
@@ -1072,6 +1105,11 @@ void handle_net(void)
 			{
 				eepromSaveStr(200, cgival, length);
 				save_checkbox_cgivalue((char*)&(buf[dat_p+4]), "LCD", 50);
+				save_cgivalue_if_found((char*)&(buf[dat_p+4]), "digitlal", 60);
+				save_cgivalue_if_found((char*)&(buf[dat_p+4]), "analog", 61);
+				save_cgivalue_if_found((char*)&(buf[dat_p+4]), "onewire", 62);
+				save_cgivalue_if_found((char*)&(buf[dat_p+4]), "dht", 63);
+				reScheduleTasks();
 			}
 
             dat_p=print_settings_general_webpage(buf);
@@ -1143,7 +1181,9 @@ void handle_net(void)
 			save_cgivalue_if_found((char*)&(buf[dat_p+4]), "DNS2", 33);
 			save_cgivalue_if_found((char*)&(buf[dat_p+4]), "DNS3", 34);
 
-			while(true);  //causes watchdog to reset the avr
+		    dat_p=print_redirect(buf, "/settings/net");
+		    goto SENDTCPANDDIE;
+
 		} else if (strncmp_P((char *)&(buf[dat_p+4]),PSTR("/settings/net"),13)==0){
 		if (!user_is_auth((char *)&(buf[dat_p+4])))
 		{
@@ -1278,6 +1318,7 @@ void handle_net(void)
     //
 
 	SENDTCPANDDIE:
+	timedSaveEeprom();
 	www_server_reply(buf,dat_p); // send data
 	while(true);
 

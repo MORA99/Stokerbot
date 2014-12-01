@@ -159,6 +159,7 @@ uint8_t parse_ip(uint8_t *ip_byte_str,const char *str)
         }
         i=0;
         while(*str && i<4){
+				if (!isdigit(*str) && *str != '.') return 2;
                 // if a number then start
                 if (bufpos < 3 && isdigit(*str)){
                         strbuf[bufpos]=*str; // copy

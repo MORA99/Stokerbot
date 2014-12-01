@@ -1,10 +1,10 @@
 #include "timer.h"
 #include "twi.h"
-#include "test_web_client.h"
 
 uint16_t seconds, tick;
 uint16_t tickS = 1;
 uint16_t timerCounter;
+extern void updateCounters();
 
 inline uint16_t tickDiff(uint16_t oldtick)
 {

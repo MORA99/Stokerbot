@@ -55,9 +55,9 @@
 
 
 void loadSimpleSensorData(void);
-static void updateSimpleSensors(void);
+void updateSimpleSensors(void);
 void updateCounters(void);
-static void timedSaveEeprom(void);
+void timedSaveEeprom(void);
 void timedAlarmCheck(void);
 bool save_cgivalue_if_found(char* buffer, char* name, uint16_t eeprom_location);
 void getDHTData();
@@ -66,6 +66,7 @@ void sendData();
 void remoteIO();
 void ARPbroadcast();
 void DHCPTimer();
+void updateAnalogSensors();
 
 static uint8_t mymac[6] = {0x56,0x55,0x58,0x10,0x00,0x29};
 
@@ -197,8 +198,8 @@ void loadSimpleSensorData()
 
 		if (simpleSensorTypes[i] == 3) //counter
 		{
-			uint8_t eepos = 2000 + (i*4);
-			simpleSensorValues[i] = eepromReadWord(eepos);
+			uint16_t eepos = 2000 + (i*4);
+			simpleSensorValues[i] = eepromReadDword(eepos);
 		} else {
 			simpleSensorValues[i] = 0;
 		}
@@ -213,12 +214,22 @@ void loadSimpleSensorData()
 
 		if (simpleSensorTypes[i+8] == 3) //counter
 		{
-			uint8_t eepos = 2500 + (i*4);
-			simpleSensorValues[i+8] = eepromReadWord(eepos);
+			uint16_t eepos = 2500 + (i*4);
+			simpleSensorValues[i+8] = eepromReadDword(eepos);
 		} else {
 			simpleSensorValues[i+8] = 0;
 		}
 	}
+	
+	for (uint8_t i=0; i<=7; i++)
+	printf("SSV %u : %lu \r\n", i , simpleSensorValues[i]);
+	for (uint8_t i=0; i<=3; i++)
+	printf("SSV %u : %lu \r\n", i , simpleSensorValues[i+8]);
+	
+	for (uint8_t i=0; i<=7; i++)
+	printf("SSE %u : %lu \r\n", i , eepromReadDword(2000+i*4));
+	for (uint8_t i=0; i<=3; i++)
+	printf("SSE %u : %lu \r\n", i , eepromReadDword(2500+i*4));	
 }
 
 FILE uart_str = FDEV_SETUP_STREAM(uart_putchar, NULL, _FDEV_SETUP_WRITE);   
@@ -354,12 +365,30 @@ int main(void){
 			eepromWriteByte(pos+13, 0); //reverse
 			eepromWriteByte(pos+14, 0); //not-used
 		}
-    	
-		eepromWriteByte(1, EEPROM_VERSION);
-		
+    		
 		eepromWriteByte(1200, 3); //Interval 3=30sec
 		eepromWriteStr(1000, "stokerlog.dk", 13); //host
 		eepromWriteStr(1100, "/incoming.php?v=1", 18); //url
+		
+		/*
+		60		Analog interval
+		61		Digital interval
+		62		Onewire interval
+		63		DHT interval
+		*/
+		eepromWriteByte(60, 2); //Analog interval
+		eepromWriteByte(61, 2); //Digital interval
+		eepromWriteByte(62, 2); //Onewire interval
+		eepromWriteByte(63, 5); //DHT interval
+		
+		for (uint8_t i=0; i<=7; i++)
+		{
+			eepromSaveDword(2000 + i*4, 0);
+		}
+		for (uint8_t i=0; i<=3; i++)
+		{
+			eepromSaveDword(2500 + i*4, 0);
+		}		
 	}
 
 	if (dnsip[0] == 255)
@@ -371,23 +400,27 @@ int main(void){
 		save_ip_addresses();
 	}
 
-	if (eepromReadByte(2) < 3)
+	if (eepromReadByte(1) < 3)
 	{	
 		eepromWriteWord(29, 80);  //web port
 		eepromWriteByte(25, 0); //Dont disable broadcast
 		eepromWriteByte(1200, 3); //Interval 3=30sec
 		eepromWriteStr(1000, "stokerlog.dk", 13); //host
 		eepromWriteStr(1100, "/incoming.php?v=1", 18); //url
+		eepromWriteByte(60, 2); //Analog interval
+		eepromWriteByte(61, 2); //Digital interval
+		eepromWriteByte(62, 2); //Onewire interval
+		eepromWriteByte(63, 5); //DHT interval		
 	}
 	
 	//Expand to 32bit sensor values
-	if (eepromReadByte(2) < 4)
+	if (eepromReadByte(1) < 4)
 	{
-		for (uint8_t i=0; i<7; i++)
+		for (uint8_t i=0; i<=7; i++)
 		{
 			eepromSaveDword(2000 + i*4, eepromReadWord(140+i*2));
 		}
-		for (uint8_t i=0; i<3; i++)
+		for (uint8_t i=0; i<=3; i++)
 		{
 			eepromSaveDword(2500 + i*4, eepromReadWord(160+i*2));
 		}		
@@ -594,10 +627,12 @@ int main(void){
 		uint8_t interval = eepromReadByte(1200) * 10;
 
 		//Queue.h handles slow tasks, each tick is 1second	
-		scheduleFunction(updateSimpleSensors, "SimpleSensors", 2);
-		scheduleFunction(updateOWSensors, "updateOWSensors", 2);
+		scheduleFunction(updateSimpleSensors, "SimpleSensors", eepromReadByte(61));
+		scheduleFunction(updateAnalogSensors, "updateAnalog", eepromReadByte(60));
+		scheduleFunction(updateOWSensors, "updateOWSensors", eepromReadByte(62));
+		scheduleFunction(getDHTData, "getDHTData", eepromReadByte(63));
+		
 		scheduleFunction(timedAlarmCheck, "timedAlarmCheck", 5);
-		scheduleFunction(getDHTData, "getDHTData", 5);
 		scheduleFunction(remoteIO, "remoteIO", 1);
 		scheduleFunction(sendData, "sendData", interval);
 		scheduleFunction(updateLCD, "updateLCD", 1);
@@ -646,6 +681,15 @@ void sendData()
 	}
 	hasLcd = eepromReadByte(50);
 	scheduleChangeFunction("sendData", tickS+interval, interval);
+}
+
+void reScheduleTasks()
+{
+	//scheduleChangeFunction("sendData", tickS+interval, interval);
+	scheduleChangeFunction("SimpleSensors", tickS+eepromReadByte(61), eepromReadByte(61));
+	scheduleChangeFunction("updateAnalog", tickS+eepromReadByte(62), eepromReadByte(62));
+	scheduleChangeFunction("updateOWSensors", tickS+eepromReadByte(63), eepromReadByte(63));
+	scheduleChangeFunction("getDHTData", tickS+eepromReadByte(64), eepromReadByte(64));
 }
 
 void remoteIO()
@@ -760,7 +804,7 @@ void timedAlarmCheck(void)
 }
 
 //Called every 30minutes and only saved if theres any changes (100000 / 30minutes worst case = 5years)
-static void timedSaveEeprom(void)
+void timedSaveEeprom(void)
 {
 	for (uint8_t i=0; i<8; i++)
 	{
@@ -825,7 +869,7 @@ void updateCounters(void)
 	}
 }
 
-static void updateSimpleSensors(void)
+void updateAnalogSensors(void)
 {
 	//Send ADC+digital pins
 	//ADC pins
@@ -842,12 +886,15 @@ static void updateSimpleSensors(void)
 		if (simpleSensorTypes[i] == TYPE_DIGIN)  //DIGITAL
 		{
 			if (GETBIT(PINA, i) > 0)
-				simpleSensorValues[i] = 1;
+			simpleSensorValues[i] = 1;
 			else
-				simpleSensorValues[i] = 0;
+			simpleSensorValues[i] = 0;
 		}
-	}
+	}	
+}
 
+void updateSimpleSensors(void)
+{
 	//Digital pins
 	for (uint8_t i=0; i<=3; i++)
 	{
