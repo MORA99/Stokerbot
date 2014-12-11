@@ -27,7 +27,7 @@
 #else
 
 /* set bus-config with ow_set_bus() */
-uint8_t OW_PIN_MASK; 
+uint8_t OW_PIN_MASK;
 volatile uint8_t* OW_IN;
 volatile uint8_t* OW_OUT;
 volatile uint8_t* OW_DDR;
@@ -40,19 +40,19 @@ volatile uint8_t* OW_DDR;
 //#define OW_PIN2 PD6
 //#define OW_DIR_IN2()   ( *OW_DDR &= ~(1 << OW_PIN2 ) )
 
-void OW_selectPort(unsigned char port) 
+void OW_selectPort(unsigned char port)
 {
 	switch(port)
 	{
 		case 1:
-			ow_set_bus(&PIND,&PORTD,&DDRD,PD4);
-			break;
+		ow_set_bus(&PIND,&PORTD,&DDRD,PD4);
+		break;
 		case 2:
-			ow_set_bus(&PIND,&PORTD,&DDRD,PD5);
-			break;
+		ow_set_bus(&PIND,&PORTD,&DDRD,PD5);
+		break;
 		case 3:
-			ow_set_bus(&PIND,&PORTD,&DDRD,PD6);
-			break;
+		ow_set_bus(&PIND,&PORTD,&DDRD,PD6);
+		break;
 	}
 }
 
@@ -82,14 +82,14 @@ uint8_t search_sensors(int maxSensors)
 		
 		if( diff == OW_PRESENCE_ERR ) {
 			#ifdef OW_DEBUG
-				printf_P(PSTR( "No Sensor found\r" ));
+			printf_P(PSTR( "No Sensor found\r" ));
 			#endif
 			break;
 		}
 		
 		if( diff == OW_DATA_ERR ) {
 			#ifdef OW_DEBUG
-				printf_P(PSTR( "Bus Error\r" ));
+			printf_P(PSTR( "Bus Error\r" ));
 			#endif
 			break;
 		}
@@ -123,13 +123,13 @@ uint8_t ow_input_pin_state()
 
 void ow_parasite_enable(void)
 {
-    OW_OUT_HIGH();
+	OW_OUT_HIGH();
 	OW_DIR_OUT();
 }
 
 void ow_parasite_disable(void)
 {
-    OW_OUT_LOW();
+	OW_OUT_LOW();
 	OW_DIR_IN();
 }
 
@@ -159,63 +159,74 @@ uint8_t ow_reset(void)
 	// and input-pin gets back to high due to pull-up-resistor
 	_delay_us(480-66);
 	if( OW_GET_IN() == 0 )		// short circuit
-		err = 1;
+	err = 1;
 	
 	return err;
 }
 
-
-/* Timing issue when using runtime-bus-selection (!OW_ONE_BUS):
-   The master should sample at the end of the 15-slot after initiating
-   the read-time-slot. The variable bus-settings need more
-   cycles than the constant ones so the delays had to be shortened 
-   to achive a 15uS overall delay 
-   Setting/clearing a bit in I/O Register needs 1 cyle in OW_ONE_BUS
-   but around 14 cyles in configureable bus (us-Delay is 4 cyles per uS) */
-uint8_t ow_bit_io( uint8_t b )
+uint8_t ow_read_bit()
 {
-	uint8_t sreg;
-	
-	sreg=SREG;
 	cli();
-	
+	int result;
+
 	OW_DIR_OUT(); // drive bus low
-	
-	_delay_us(1); // Recovery-Time wuffwuff was 1
-	if ( b ) OW_DIR_IN(); // if bit is 1 set bus high (by ext. pull-up)
-		
-	// wuffwuff delay was 15uS-1 see comment above
-	_delay_us(15-1-OW_CONF_DELAYOFFSET);
-		
-	if( OW_GET_IN() == 0 ) b = 0;  // sample at end of read-timeslot
-	
-	_delay_us(60-15);
+	_delay_us(6);
 	OW_DIR_IN();
-	
-	SREG=sreg; // sei();
-	
-	return b;
+	_delay_us(6); //Recommended values say 9
+	if( OW_GET_IN() == 0 )
+	result = 0;
+	else
+	result=1; // sample at end of read-timeslot (Reading only possible with high bit)
+	_delay_us(58); // Complete the time slot and 10us recovery
+	sei();
+	return result;
 }
 
-
-uint8_t ow_byte_wr( uint8_t b )
+void ow_write_bit(uint8_t bit)
 {
-	uint8_t i = 8, j;
-	
-	do {
-		j = ow_bit_io( b & 1 );
+	cli();
+	if (bit)
+	{
+		// Write '1' bit
+		OW_DIR_OUT(); // drive bus low
+		_delay_us(6);
+		OW_DIR_IN();
+		_delay_us(64); // Complete the time slot and 10us recovery
+	}
+	else
+	{
+		// Write '0' bit
+		OW_DIR_OUT(); // drive bus low
+		_delay_us(60);
+		OW_DIR_IN();
+		_delay_us(10);
+	}
+	sei();
+}
+
+void ow_byte_wr( uint8_t b )
+{
+	for (uint8_t i=8; i>0; i--)
+	{
+		ow_write_bit( b & 1 );
 		b >>= 1;
-		if( j ) b |= 0x80;
-	} while( --i );
-	
-	return b;
+	}
 }
 
 
 uint8_t ow_byte_rd( void )
 {
-  // read by sending 0xff (a dontcare?)
-  return ow_byte_wr( 0xFF ); 
+	int loop, result=0;
+	for (loop = 0; loop < 8; loop++)
+	{
+		// shift the result to get it ready for the next bit
+		result >>= 1;
+
+		// if result is one, then set MS bit
+		if (ow_read_bit())
+		result |= 0x80;
+	}
+	return result;
 }
 
 
@@ -234,20 +245,20 @@ uint8_t ow_rom_search( uint8_t diff, uint8_t *id )
 	do {
 		j = 8;					// 8 bits
 		do {
-			b = ow_bit_io( 1 );			// read bit
-			if( ow_bit_io( 1 ) ) {			// read complement bit
+			b = ow_read_bit();			// read bit
+			if( ow_read_bit() ) {			// read complement bit
 				if( b )					// 11
 				return OW_DATA_ERR;			// data error
 			}
 			else {
 				if( !b ) {				// 00 = 2 devices
 					if( diff > i || ((*id & 1) && diff != i) ) {
-					b = 1;				// now 1
-					next_diff = i;			// next pass 0
+						b = 1;				// now 1
+						next_diff = i;			// next pass 0
 					}
 				}
 			}
-			ow_bit_io( b );     			// write bit
+			ow_write_bit( b );     			// write bit
 			*id >>= 1;
 			if( b ) *id |= 0x80;			// store bit
 			
@@ -256,7 +267,7 @@ uint8_t ow_rom_search( uint8_t diff, uint8_t *id )
 		} while( --j );
 		
 		id++;					// next byte
-	
+		
 	} while( i );
 	
 	return next_diff;				// to continue search
@@ -276,7 +287,7 @@ void ow_command( uint8_t command, uint8_t *id )
 			ow_byte_wr( *id );
 			id++;
 		} while( --i );
-	} 
+	}
 	else {
 		ow_byte_wr( OW_SKIP_ROM );			// to all devices
 	}

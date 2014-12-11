@@ -1,6 +1,6 @@
 /************************************************************************
-2.20 Changelog
-* Alle 8 alarmer virker nu
+2.20 Changelog 12.12.2014
+* Alle 8 alarmer virker
 * Tilføjet ajax save funktion til alarm siden, så den ikke reloader for hver alarm.
 * Ny netværks stack
 * Tilføjet DHCP funktion
@@ -8,9 +8,17 @@
 * export.json tilføjet som en json version af export.htm
 * webfiles flyttet til egen fil
 * IP og evt. andet data sendes til boxdata.php, som viser det under enheder, bl.a. for at finde bottens lokale ip når den bruger DHCP.
-* Svag intern pullup kan aktiveres under IO nu
+* Svag intern pullup kan aktiveres under IO
 * fmu2 lagt sammen med fmu.js, loader.js flyttet til progammet
-* 
+* Forsiden på botten opdatere sig selv vha ajax
+* Mindre rettelser til onewire koden
+
+2.14 Changelog 22.11.2014
+* Web port kan sættes under Network (hvis man har en router der ikke kan ændre ekstern port til lokal port og man vil kunne tilgå botten udefra)
+* Det er muligt at deaktivere broadcast understøttelse under Network, dette kan hjælpe hvis botten er på et netværk med meget broadcast trafik og den ikke kan følge med, det betyder at den istedet broadcaster sin MAC adresse hvert 5. sekund, da det er den eneste måde at få fat på den, når den ikke svarer på broadcast.
+* Man kan ændre den adresse botten sender sensor data til, hvis man vil bruge sin egen server.
+* Intervallet der sendes data kan ændres fra 30sek optil 30minutter og helt deaktiveres.
+* Debug serial interface er ændret fra 9600baud til 250.000baud
 ************************************************************************/
 
 
@@ -220,16 +228,6 @@ void loadSimpleSensorData()
 			simpleSensorValues[i+8] = 0;
 		}
 	}
-	
-	for (uint8_t i=0; i<=7; i++)
-	printf("SSV %u : %lu \r\n", i , simpleSensorValues[i]);
-	for (uint8_t i=0; i<=3; i++)
-	printf("SSV %u : %lu \r\n", i , simpleSensorValues[i+8]);
-	
-	for (uint8_t i=0; i<=7; i++)
-	printf("SSE %u : %lu \r\n", i , eepromReadDword(2000+i*4));
-	for (uint8_t i=0; i<=3; i++)
-	printf("SSE %u : %lu \r\n", i , eepromReadDword(2500+i*4));	
 }
 
 FILE uart_str = FDEV_SETUP_STREAM(uart_putchar, NULL, _FDEV_SETUP_WRITE);   
@@ -259,7 +257,6 @@ int main(void){
 #endif
 
  		mywdt_sleep(2500);
-
 		spilcd_init();
 		LCDclr();
 		mywdt_sleep(100);
@@ -378,7 +375,7 @@ int main(void){
 		*/
 		eepromWriteByte(60, 2); //Analog interval
 		eepromWriteByte(61, 2); //Digital interval
-		eepromWriteByte(62, 2); //Onewire interval
+		eepromWriteByte(62, 4); //Onewire interval (Divided by 2 in the timer since OW needs 2 calls to update)
 		eepromWriteByte(63, 5); //DHT interval
 		
 		for (uint8_t i=0; i<=7; i++)
@@ -534,6 +531,7 @@ int main(void){
         int8_t rval=0;
         init_mac(mymac);
         while(rval==0){
+			mywdt_reset();
 	        uint16_t plen=enc28j60PacketReceive(BUFFER_SIZE, buf);
 	        buf[BUFFER_SIZE]='\0';
 	        rval=packetloop_dhcp_initial_ip_assignment(buf,plen,mymac[5]);
@@ -629,7 +627,7 @@ int main(void){
 		//Queue.h handles slow tasks, each tick is 1second	
 		scheduleFunction(updateSimpleSensors, "SimpleSensors", eepromReadByte(61));
 		scheduleFunction(updateAnalogSensors, "updateAnalog", eepromReadByte(60));
-		scheduleFunction(updateOWSensors, "updateOWSensors", eepromReadByte(62));
+		scheduleFunction(updateOWSensors, "updateOWSensors", eepromReadByte(62) /2 );
 		scheduleFunction(getDHTData, "getDHTData", eepromReadByte(63));
 		
 		scheduleFunction(timedAlarmCheck, "timedAlarmCheck", 5);
@@ -687,9 +685,9 @@ void reScheduleTasks()
 {
 	//scheduleChangeFunction("sendData", tickS+interval, interval);
 	scheduleChangeFunction("SimpleSensors", tickS+eepromReadByte(61), eepromReadByte(61));
-	scheduleChangeFunction("updateAnalog", tickS+eepromReadByte(62), eepromReadByte(62));
-	scheduleChangeFunction("updateOWSensors", tickS+eepromReadByte(63), eepromReadByte(63));
-	scheduleChangeFunction("getDHTData", tickS+eepromReadByte(64), eepromReadByte(64));
+	scheduleChangeFunction("updateAnalog", tickS+eepromReadByte(60), eepromReadByte(60));
+	scheduleChangeFunction("updateOWSensors", tickS+(eepromReadByte(62) / 2), eepromReadByte(62) / 2 );
+	scheduleChangeFunction("getDHTData", tickS+eepromReadByte(63), eepromReadByte(63));
 }
 
 void remoteIO()

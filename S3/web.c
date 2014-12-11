@@ -430,30 +430,32 @@ uint16_t print_export_json(uint8_t *buf)
 
 
 // prepare the webpage by writing the data to the tcp send buffer
-uint16_t print_webpage(uint8_t *buf)
+uint16_t print_webpage(uint8_t *buf, bool ajax)
 {
         uint16_t plen;
 
 		plen=http200ok();
+		if (!ajax) {
+			sprintf_P(tempbuf, PSTR("<SCRIPT SRC='/loader.js?%u'></SCRIPT><script src='/microajax.js'></script>"),tickS);
+			plen=fill_tcp_data(buf,plen,tempbuf);
 
-		sprintf_P(tempbuf, PSTR("<SCRIPT SRC='/loader.js?%u'></SCRIPT>"),tickS);
-		plen=fill_tcp_data(buf,plen,tempbuf);
+			sprintf_P(tempbuf, PSTR("<SCRIPT>menu(2,1);</SCRIPT>"));
+			plen=fill_tcp_data(buf,plen,tempbuf);
 
-		sprintf_P(tempbuf, PSTR("<SCRIPT>menu(2,1);</SCRIPT><PRE>"));
-		plen=fill_tcp_data(buf,plen,tempbuf);
-
-		sprintf_P(tempbuf, PSTR("\nSystemID: %02X%02X%02X%02X%02X%02X%02X%02X\n"),systemID[0],systemID[1],systemID[2],systemID[3],systemID[4],systemID[5],systemID[6],systemID[7]);
-		plen=fill_tcp_data(buf,plen,tempbuf);
-
+			sprintf_P(tempbuf, PSTR("SystemID: %02X%02X%02X%02X%02X%02X%02X%02X<br><br>"),systemID[0],systemID[1],systemID[2],systemID[3],systemID[4],systemID[5],systemID[6],systemID[7]);
+			plen=fill_tcp_data(buf,plen,tempbuf);
+		}
+	
         if (gw_arp_state != 2){
-                plen=fill_tcp_data_p(buf,plen,PSTR("\nwaiting for GW IP to answer arp.\n"));
+                plen=fill_tcp_data_p(buf,plen,PSTR("<br>waiting for GW IP to answer arp.<br>"));
                 return(plen);
         }
         if (dns_state==1){
-                plen=fill_tcp_data_p(buf,plen,PSTR("\nwaiting for DNS answer.\n"));
+                plen=fill_tcp_data_p(buf,plen,PSTR("<br>waiting for DNS answer.<br>"));
                 return(plen);
         }
 
+		plen=fill_tcp_data_p(buf,plen,PSTR("<div id='index'>"));
 
 		uint8_t days = 0;
 		uint8_t hours = 0;
@@ -477,24 +479,88 @@ uint16_t print_webpage(uint8_t *buf)
 		}
 		seconds = up;
 
-		sprintf_P(tempbuf, PSTR("\nUptime: %udays %uhours %uminutes %useconds\n"),days, hours, minutes, seconds);
+		sprintf_P(tempbuf, PSTR("Uptime: %udays %uhours %uminutes %useconds<br><br>"),days, hours, minutes, seconds);
 		plen=fill_tcp_data(buf,plen,tempbuf);
 
-        plen=fill_tcp_data_p(buf,plen,PSTR("\nNumber of data uploads : "));
-        // convert number to string:
-        itoa(web_client_attempts,tempbuf,10);
-        plen=fill_tcp_data(buf,plen,tempbuf);
-
-        plen=fill_tcp_data_p(buf,plen,PSTR("\nNumber successful data uploads : "));
-        // convert number to string:
-        itoa(web_client_sendok,tempbuf,10);
-        plen=fill_tcp_data(buf,plen,tempbuf);
-
-		plen=fill_tcp_data_p(buf,plen,PSTR("</pre><script>for (i=0; i < sensors.length; i++) { dw(sensors[i][1]+' = '+sensors[i][2]+'<br>'); }</script>"));
+		uint32_t pct = 0;
+		if (web_client_attempts > 0 && web_client_sendok > 0) pct = (web_client_sendok / web_client_attempts)*100;
 		
-		//Debug for at se hvor tæt vi er på grænsen (buffer size - lidt)
-		printf_P(PSTR("Plen is %d \r\n"), plen);
-        
+		sprintf_P(tempbuf, PSTR("Webclient uploads %lu/%lu (%lu%%)<br>"),web_client_sendok,web_client_attempts,pct);
+		plen=fill_tcp_data(buf,plen,tempbuf);
+
+		plen=fill_tcp_data_p(buf,plen,PSTR("<br><table border=0><thead><tr><th colspan=2>Sensors</th></tr>"));
+	
+	//Analog pins
+	for (uint8_t i=0; i<=3; i++)
+	{
+		sprintf_P(tempbuf, PSTR("<tr><td>A%u</td><td>%lu</td></tr>"),i,simpleSensorValues[i]);
+		plen = fill_tcp_data(buf,plen,tempbuf);
+	}
+
+	//Digital pins
+	for (uint8_t i=0; i<=3; i++)
+	{
+		sprintf_P(tempbuf, PSTR("<tr><td>D%u</td><td>%lu</td></tr>"),i,simpleSensorValues[i+8]);
+		plen = fill_tcp_data(buf,plen,tempbuf);
+	}		
+
+	for (uint8_t i=0; i<4; i++)
+	{
+		if (simpleSensorTypes[i+8] == TYPE_DHT22)
+		{
+			float temperature=0;
+			float humidity=0;
+			if(simpleSensorValues[50] & 0x8000) {
+				temperature = (float)((simpleSensorValues[50+(i*2)] & 0x7FFF) / 10.0) * -1.0;
+				} else {
+				temperature = (float)(simpleSensorValues[50+(i*2)])/10.0;
+			}
+			humidity = (float)(simpleSensorValues[50+(i*2)+1])/10.0;
+			sprintf_P(tempbuf, PSTR("<tr><td>D%dT</td><td>%g</td></tr><tr><td>D%dH</td><td>%g</td></tr>"),i,temperature,i,humidity);
+			plen = fill_tcp_data(buf,plen,tempbuf);
+		}
+		if (simpleSensorTypes[i+8] == TYPE_DHT11)
+		{
+			float temperature=simpleSensorValues[50+(i*2)];
+			float humidity=simpleSensorValues[50+(i*2)+1];
+			sprintf_P(tempbuf, PSTR("<tr><td>D%dT</td><td>%g</td><td>D%dH</td><td>%g</td></tr>"),i,temperature,i,humidity);
+			plen = fill_tcp_data(buf,plen,tempbuf);
+		}
+	}
+
+	for (uint8_t i=0; i<MAXSENSORS; i++)
+	{
+		if (sensorValues[(i*SENSORSIZE)+FAMILY] != 0)
+		{
+			int frac = sensorValues[(i*SENSORSIZE)+VALUE2]*DS18X20_FRACCONV;  //Ganger de sidste par bits, med det step DS18B20 bruger
+			
+			sprintf_P(tempbuf, PSTR("<tr><td>%02X%02X%02X%02X%02X%02X%02X%02X</td><td>%c%d.%04d</td></tr>"),
+			sensorValues[(i*SENSORSIZE)+FAMILY],
+			sensorValues[(i*SENSORSIZE)+ID1],
+			sensorValues[(i*SENSORSIZE)+ID2],
+			sensorValues[(i*SENSORSIZE)+ID3],
+			sensorValues[(i*SENSORSIZE)+ID4],
+			sensorValues[(i*SENSORSIZE)+ID5],
+			sensorValues[(i*SENSORSIZE)+ID6],
+			sensorValues[(i*SENSORSIZE)+CRC],
+			sensorValues[(i*SENSORSIZE)+SIGN],
+			sensorValues[(i*SENSORSIZE)+VALUE1],
+			frac
+			);
+
+			plen = fill_tcp_data(buf,plen,tempbuf);
+		}
+	}
+		
+		plen=fill_tcp_data_p(buf,plen,PSTR("</table>"));
+		
+		if (!ajax)
+		{		
+			plen=fill_tcp_data_p(buf,plen,PSTR("<script>function upd() { microAjax('/index.ajax', function (res) {document.getElementById('index').innerHTML= res;setTimeout(upd, 5000);});};setTimeout(upd(),5000);</script>"));
+				
+			printf_P(PSTR("Index : Plen is %d \r\n"), plen);				
+		}
+		       
 		return(plen);
 }
 
@@ -986,6 +1052,11 @@ void handle_net(void)
 						dnslkup_request(buf,host,gwmac);
 					} else {
 						printf_P(PSTR("WWW host is an IP : %u.%u.%u.%u\r\n"),wwwip[0],wwwip[1],wwwip[2],wwwip[3]);
+						if (route_via_gw(wwwip)==0)
+						{
+							printf("IP is local, requesting mac address \r\n");
+							get_mac_with_arp(wwwip,TRANS_NUM_WWWMAC,&arpresolver_result_callback);
+						}						
 						dns_state=2;
 					}
                     return;
@@ -993,11 +1064,11 @@ void handle_net(void)
 
             if (dns_state==1 && dnslkup_haveanswer()){
 					dnslkup_get_ip(wwwip);
-					printf_P(PSTR("Got dns reply : %d.%d.%d.%d \r\n"),wwwip[0],wwwip[1],wwwip[2],wwwip[3]);
+					printf_P(PSTR("Got DNS reply : %d.%d.%d.%d \r\n"),wwwip[0],wwwip[1],wwwip[2],wwwip[3]);
                     dns_state=2;
 					if (route_via_gw(wwwip)==0)
 					{
-						printf("Dns resolved to local IP, requesting mac address \r\n");
+						printf("DNS resolved to local IP, requesting mac address \r\n");
 						get_mac_with_arp(wwwip,TRANS_NUM_WWWMAC,&arpresolver_result_callback);						
 					}
             }
@@ -1087,10 +1158,12 @@ void handle_net(void)
     }
 
     if (strncmp("/ ",(char *)&(buf[dat_p+4]),2)==0){	
-            dat_p=print_webpage(buf);		
-
+            dat_p=print_webpage(buf,false);
             goto SENDTCP;
-    } else if (strncmp_P((char *)&(buf[dat_p+4]),PSTR("/settings/general"),17)==0){	
+	} else if (strncmp_P((char *)&(buf[dat_p+4]),PSTR("/index.ajax"),11)==0){
+            dat_p=print_webpage(buf,true);
+            goto SENDTCP;		
+	} else if (strncmp_P((char *)&(buf[dat_p+4]),PSTR("/settings/general"),17)==0){	
 			if (!user_is_auth((char *)&(buf[dat_p+4])))
 			{
 				dat_p=https401();

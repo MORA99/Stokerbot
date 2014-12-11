@@ -35,7 +35,7 @@ uint16_t fill_custom_client_data(uint8_t *bufptr,uint16_t len);
  void lcd_update(void);
  uint16_t http200ok(void);
  uint16_t https401(void);
- uint16_t print_webpage(uint8_t *buf);
+ uint16_t print_webpage(uint8_t *buf, bool ajax);
  uint16_t print_flash_webpage_only(const char * pos, uint8_t* buf, uint16_t plen);
  uint16_t print_settings_general_webpage(uint8_t *buf);
  uint16_t print_settings_alarms_webpage(uint8_t *buf);

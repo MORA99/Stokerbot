@@ -23,13 +23,8 @@
 #define OW_CONF_DELAYOFFSET 0
 
 #else 
-#if F_CPU<1843200
- #warning | experimental multi-bus-mode is not tested for 
- #warning | frequencies below 1,84MHz - use OW_ONE_WIRE or
- #warning | faster clock-source (i.e. internal 2MHz R/C-Osc.)
-#endif
 #define OW_CONF_CYCLESPERACCESS 13
-#define OW_CONF_DELAYOFFSET ( (uint16_t)( ((OW_CONF_CYCLESPERACCESS)*1000000L) / F_CPU  ) )
+#define OW_CONF_DELAYOFFSET 1
 #endif
 
 /*******************************************/
@@ -58,7 +53,7 @@ extern uint8_t search_sensors(int maxSensors);
 extern uint8_t ow_reset(void);
 
 extern uint8_t ow_bit_io( uint8_t b );
-extern uint8_t ow_byte_wr( uint8_t b );
+extern void ow_byte_wr( uint8_t b );
 extern uint8_t ow_byte_rd( void );
 
 extern uint8_t ow_rom_search( uint8_t diff, uint8_t *id );

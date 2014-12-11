@@ -60,6 +60,7 @@ int scheduleChangeFunction(const char *pId, queue_time_t pNewNext, queue_time_t 
         {
             if(strcmp(target.itemName, pId) == 0)
             {
+				printf("ChangeFunc : %s => %u \r\n", target.itemName, pNewRecur);
                 target.next = pNewNext;
                 target.recur = pNewRecur;
 				rv++;
@@ -89,7 +90,8 @@ int scheduleRun(queue_time_t pNow)
 						target.next = pNow + target.recur;
 						internalScheduleFunction(target);
 					}
-					target.fPtr();					
+					//printf("%u : Running %s \r\n", pNow, target.itemName);
+					target.fPtr();
 					rv++;
 				} else {
 					internalScheduleFunction(target);
