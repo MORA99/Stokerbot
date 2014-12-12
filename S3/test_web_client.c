@@ -12,6 +12,9 @@
 * fmu2 lagt sammen med fmu.js, loader.js flyttet til progammet
 * Forsiden på botten opdatere sig selv vha ajax
 * Mindre rettelser til onewire koden
+* /API mini api tilføjet, en POST til /API (med basic auth) pin=1-4 val=0..1 aktivere den valgte udgang.
+-Bemærk at dette ikke deaktivere alarmer eller remote IO, så de kan overskrive status på pinnen få sekunder efter.
+-Botten sender et 200 OK svar tilbage når den er færdig med at udføre opgaven, max opdaterings hastighed er omkring 0.1sekund
 
 2.14 Changelog 22.11.2014
 * Web port kan sættes under Network (hvis man har en router der ikke kan ændre ekstern port til lokal port og man vil kunne tilgå botten udefra)

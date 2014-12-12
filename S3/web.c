@@ -874,18 +874,20 @@ uint16_t print_flash_webpage_only(const char * pos, uint8_t* buf, uint16_t plen)
 
 bool user_is_auth(char* buffer)
 {
-printf_P(PSTR("buf = %s \r\n"), buffer);
+	char prev;
 	char* pos = strstr_P(buffer, PSTR("Authorization"));
 	pos+= 21; //Authorization: Basic
 	if (pos != NULL)
 	{
 		char* ptr2 = (char*)pos;
 		while (*ptr2 != '\r' && *ptr2 != '\n') ptr2++;
+		prev=*ptr2;
 		*ptr2 = '\0';
 	
 		memset(tempbuf, '\0', 25);
 		base64dec(tempbuf, pos, 1);
-
+		*ptr2 = prev;
+		
 		char* password = strstr(tempbuf, ":");
 
 		if (password != NULL)
@@ -1151,12 +1153,55 @@ void handle_net(void)
             udp_client_check_for_dns_answer(buf,plen);
             return;
     }
+
+    if (strncmp("POST /API",(char *)&(buf[dat_p]),9)==0){
+		
+		printf("POST /API :: \r\n *** \r\n%s\r\n***\r\n", &(buf[dat_p]));
+			
+		if (!user_is_auth((char *)&(buf[dat_p+5])))
+		{
+			dat_p=https401();
+			goto SENDTCP;
+		}
+		
+		char cgival[5];
+		uint8_t pin,val,length;
+
+		char* datapos = strstr((char *)&(buf[dat_p]), "\r\n\r\n");
+		datapos += 3;
+		*datapos ='?';
+		//printf("Data : %s \r\n", datapos);
+	
+		length = find_key_val(datapos,cgival,3,"pin");
+		if (length > 0 )
+		{	
+			pin = atoi(cgival);
+			length = find_key_val(datapos,cgival,4,"val");
+			if (length > 0 )
+			{
+				val = atoi(cgival);
+		
+				printf("API %u = %u\r\n", pin, val);
+				
+				if (pin >= 1 && pin <= 4 && (val == 0 || val == 1))
+				{
+					if (val == 1)
+						SETBIT(PORTC, (pin+1));
+					else
+						CLEARBIT(PORTC, (pin+1));
+				}
+		
+				dat_p=fill_tcp_data_p(buf,dat_p,PSTR("<h1>200 OK</h1>"));
+				goto SENDTCP;
+			}
+		}
+    }
             
     if (strncmp("GET ",(char *)&(buf[dat_p]),4)!=0){
-            dat_p=fill_tcp_data_p(buf,dat_p,PSTR("<h1>200 OK</h1>"));
-            goto SENDTCP;
+	    dat_p=fill_tcp_data_p(buf,dat_p,PSTR("<h1>200 OK</h1>"));
+	    goto SENDTCP;
     }
-
+	
     if (strncmp("/ ",(char *)&(buf[dat_p+4]),2)==0){	
             dat_p=print_webpage(buf,false);
             goto SENDTCP;
@@ -1385,8 +1430,8 @@ void handle_net(void)
 		dat_p=print_flash_webpage(true, microajax_minified_js, buf);
 		goto SENDTCP;	
     } else{
-            dat_p=fill_tcp_data_p(buf,0,PSTR("HTTP/1.0 401 Unauthorized\r\nContent-Type: text/html\r\n\r\n<h1>401 Unauthorized</h1>"));
-            goto SENDTCP;
+        dat_p=fill_tcp_data_p(buf,0,PSTR("HTTP/1.0 401 Unauthorized\r\nContent-Type: text/html\r\n\r\n<h1>401 Unauthorized</h1>"));
+        goto SENDTCP;
     }
     //
 

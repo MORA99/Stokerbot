@@ -1,20 +1,13 @@
 body  {
   background: #E9F2F6;
   margin: 0;
-  text-align: center;  /* MSIE 5 doesn't center based on auto left/right margins,
-                          but 'text-align:center' does center top-level divs: */
-  min-width: 1000px;      /* Specify a min-width for the body as wide as the 'wrapper'
-                           element itself. This prevents negative (i.e. inaccessible)
-                           left-margins in narrow browser windows when using
-                           Navigator 6+/Mozilla on Win32: */
+  text-align: center;
 }
 
 #container {
-  text-align: left;    /* Reset alignment to compensate for 'text-align:center': */
-  width: 1000px;        /* Specify the width of the element. This should be the same
-                          as 'body min-width': */
-  margin-left: auto;   /* Set left and right margins to auto, thus centering the
-                          element in the containing (body) tag: */
+  text-align: left;
+  width: 100%;
+  margin-left: auto;
   margin-right: auto;
 }
 
