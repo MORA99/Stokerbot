@@ -180,7 +180,7 @@ extern void send_udp_prepare(uint8_t *buf,uint16_t sport, const uint8_t *dip, ui
 extern void send_udp_transmit(uint8_t *buf,uint16_t datalen);
 
 // send_udp sends via a given gateway. The dstmac is the MAC of the gateway (note this replaces the client_set_gwip() function of previous versions)
-extern void send_udp(uint8_t *buf,char *data,uint8_t datalen,uint16_t sport, const uint8_t *dip, uint16_t dport,const uint8_t *dstmac);
+extern void send_udp(uint8_t *buf,char *data,uint16_t datalen,uint16_t sport, const uint8_t *dip, uint16_t dport,const uint8_t *dstmac);
 #endif
 
 // you can find out who ping-ed you if you want:

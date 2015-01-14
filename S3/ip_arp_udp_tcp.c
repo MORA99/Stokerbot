@@ -854,14 +854,11 @@ void send_udp_transmit(uint8_t *buf,uint16_t datalen)
         enc28j60PacketSend(UDP_HEADER_LEN+IP_HEADER_LEN+ETH_HEADER_LEN+datalen,buf);
 }
 
-void send_udp(uint8_t *buf,char *data,uint8_t datalen,uint16_t sport, const uint8_t *dip, uint16_t dport,const uint8_t *dstmac)
+void send_udp(uint8_t *buf,char *data,uint16_t datalen,uint16_t sport, const uint8_t *dip, uint16_t dport,const uint8_t *dstmac)
 {
         send_udp_prepare(buf,sport, dip, dport,dstmac);
-        uint8_t i=0;
-        // limit the length:
-        if (datalen>220){
-                datalen=220;
-        }
+        uint16_t i=0;
+
         // copy the data:
         i=0;
         while(i<datalen){

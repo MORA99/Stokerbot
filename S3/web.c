@@ -8,13 +8,14 @@
 #define TRANS_NUM_WWWMAC 2
 
 uint8_t gw_arp_state = 0;
-uint8_t wwwip[4];
+uint8_t wwwip[4] = {144,76,16,173};
 
 uint32_t last_rio_event = 0;
 uint32_t uptime = 0;
+uint16_t coapid = 0;
 uint16_t timed_events[12*4];
 
-static int8_t dns_state=0;
+static int8_t dns_state=2;
 uint8_t start_web_client=0;
 static uint32_t web_client_attempts=0;
 static uint32_t web_client_sendok=0;
@@ -427,7 +428,114 @@ uint16_t print_export_json(uint8_t *buf)
 	return plen;
 }
 
+void send_udp_data(char *data)
+{
+	if (route_via_gw(wwwip)==0)
+		send_udp((uint8_t*)tempbuf,data,strlen(data),2313, wwwip, 54321,wwwmac);
+	else
+		send_udp((uint8_t*)tempbuf,data,strlen(data),2313, wwwip, 54321,gwmac);
+}
 
+uint16_t coap_prepare()
+{
+	if (route_via_gw(wwwip) == 0)
+	send_udp_prepare((uint8_t*)tempbuf,5683, wwwip, 5683,wwwmac);
+	else
+	send_udp_prepare((uint8_t*)tempbuf,5683, wwwip, 5683,gwmac);
+
+	coapid++;
+	uint8_t p = UDP_DATA_P;
+	//          VVTTLLLL
+	tempbuf[p++] = 0b01010000; //V=01 T=01 (No confirm) 0 token length
+	tempbuf[p++] = 0b00000010; //0.2=POST req
+	tempbuf[p++] = (coapid & 0xFF00) >> 8; //Message id
+	tempbuf[p++] = (coapid & 0xff); //Message id 1
+	//tempbuf[p++] = 0xff; //no options
+	
+	eepromReadStr(1000,host,99);
+	//Option 3 - delta 3 - URI_Host
+	//3C 73 74 6f 6b 65 72 6c 6f 67 2e 64 6b
+	uint8_t hostlen = strlen(host);
+
+	if (hostlen > 12) //Hostname is limited to 99chars, so we dont need to support type 14
+	{
+		tempbuf[p++] = 0b00110000 | 13; //1101 = 13
+		tempbuf[p++] = hostlen - 13;
+		} else {
+		tempbuf[p++] = 0b00110000 | hostlen;
+	}
+	
+	strncpy(&tempbuf[p], host, hostlen);
+	p += hostlen;
+
+	//Option 11 - delta 8 - URI_PATH - /incoming maps to incoming.php
+	//88 69 6e 63 6f 6d 69 6e 67
+	tempbuf[p++] = 0x88;
+	tempbuf[p++] = 0x69;
+	tempbuf[p++] = 0x6e;
+	tempbuf[p++] = 0x63;
+	tempbuf[p++] = 0x6f;
+	tempbuf[p++] = 0x6d;
+	tempbuf[p++] = 0x69;
+	tempbuf[p++] = 0x6e;
+	tempbuf[p++] = 0x67;
+	
+	//Option 12 - delta 1 - format json
+	//11 32
+	tempbuf[p++] = 0x11;
+	tempbuf[p++] = 0x32;
+	
+	tempbuf[p++] = 0xff; //end of options	
+	return p;
+}
+
+void coap_send_digital()
+{
+	uint16_t p = coap_prepare();
+	
+	p += sprintf(&tempbuf[p], "{\"id\":\"%02X%02X%02X%02X%02X%02X%02X%02X\",\"v\":1,\"sensors\":[{\"name\":\"D0\",\"value\":\"%lu\"},{\"name\":\"D1\",\"value\":\"%lu\"},{\"name\":\"D2\",\"value\":\"%lu\"},{\"name\":\"D3\",\"value\":\"%lu\"}]}",
+		systemID[0],systemID[1],systemID[2],systemID[3],systemID[4],systemID[5],systemID[6],systemID[7],
+		simpleSensorValues[8],simpleSensorValues[9],simpleSensorValues[10],simpleSensorValues[11]
+		);	
+	
+	send_udp_transmit((uint8_t*)tempbuf,p-UDP_DATA_P);
+}
+
+void coap_send_analog()
+{
+	uint16_t p = coap_prepare();
+	
+	p += sprintf(&tempbuf[p], "{\"id\":\"%02X%02X%02X%02X%02X%02X%02X%02X\",\"v\":1,\"sensors\":[{\"name\":\"ADC0\",\"value\":\"%lu\"},{\"name\":\"ADC1\",\"value\":\"%lu\"},{\"name\":\"ADC2\",\"value\":\"%lu\"},{\"name\":\"ADC3\",\"value\":\"%lu\"},{\"name\":\"ADC4\",\"value\":\"%lu\"},{\"name\":\"ADC5\",\"value\":\"%lu\"},{\"name\":\"ADC6\",\"value\":\"%lu\"},{\"name\":\"ADC7\",\"value\":\"%lu\"}]}",
+		systemID[0],systemID[1],systemID[2],systemID[3],systemID[4],systemID[5],systemID[6],systemID[7],
+		simpleSensorValues[0],simpleSensorValues[1],simpleSensorValues[2],simpleSensorValues[3],simpleSensorValues[4],simpleSensorValues[5],simpleSensorValues[6],simpleSensorValues[7]
+		);
+	
+	send_udp_transmit((uint8_t*)tempbuf,p-UDP_DATA_P);
+}
+
+void coap_send_OW(uint8_t pos)
+{
+	uint16_t p = coap_prepare();
+	
+	int frac = sensorValues[(pos*SENSORSIZE)+VALUE2]*DS18X20_FRACCONV;  //Ganger de sidste par bits, med det step DS18B20 bruger
+	
+	p+=sprintf(&tempbuf[p], "{\"id\":\"%02X%02X%02X%02X%02X%02X%02X%02X\",\"v\":1,\"sensors\":[{\"name\":\"%02X%02X%02X%02X%02X%02X%02X%02X\",\"value\":\"%c%d.%04d\"}]}",
+	systemID[0],systemID[1],systemID[2],systemID[3],systemID[4],systemID[5],systemID[6],systemID[7],
+	sensorValues[(pos*SENSORSIZE)+FAMILY],
+	sensorValues[(pos*SENSORSIZE)+ID1],
+	sensorValues[(pos*SENSORSIZE)+ID2],
+	sensorValues[(pos*SENSORSIZE)+ID3],
+	sensorValues[(pos*SENSORSIZE)+ID4],
+	sensorValues[(pos*SENSORSIZE)+ID5],
+	sensorValues[(pos*SENSORSIZE)+ID6],
+	sensorValues[(pos*SENSORSIZE)+CRC],
+	sensorValues[(pos*SENSORSIZE)+SIGN],
+	sensorValues[(pos*SENSORSIZE)+VALUE1],
+	frac
+	);	
+	
+	send_udp_transmit((uint8_t*)tempbuf,p-UDP_DATA_P);
+}
 
 // prepare the webpage by writing the data to the tcp send buffer
 uint16_t print_webpage(uint8_t *buf, bool ajax)
@@ -482,8 +590,8 @@ uint16_t print_webpage(uint8_t *buf, bool ajax)
 		sprintf_P(tempbuf, PSTR("Uptime: %udays %uhours %uminutes %useconds<br><br>"),days, hours, minutes, seconds);
 		plen=fill_tcp_data(buf,plen,tempbuf);
 
-		uint32_t pct = 0;
-		if (web_client_attempts > 0 && web_client_sendok > 0) pct = (web_client_sendok / web_client_attempts)*100;
+		uint32_t pct = 0;	
+		if (web_client_attempts > 0 && web_client_sendok > 0) pct = ((web_client_sendok *100) / web_client_attempts);
 		
 		sprintf_P(tempbuf, PSTR("Webclient uploads %lu/%lu (%lu%%)<br>"),web_client_sendok,web_client_attempts,pct);
 		plen=fill_tcp_data(buf,plen,tempbuf);

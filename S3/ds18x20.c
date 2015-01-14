@@ -20,6 +20,7 @@ changelog:
 #include <stdbool.h>
 #include <util/delay.h>
 #include <avr/wdt.h>
+#include "web.h"
 
 #include "config.h"
 #include "ds18x20.h"
@@ -85,7 +86,7 @@ void updateOWSensors()
 					sensorScan[(i*SENSORSIZE)+ID6],
 					sensorScan[(i*SENSORSIZE)+CRC]
 					);
-					_delay_ms(1000);
+					//_delay_ms(1000);
 					//Read A+B counters
 
 					ow_reset();
@@ -147,38 +148,13 @@ void updateOWSensors()
 						sensorScan[i*OW_ROMCODE_SIZE+ID6],
 						sensorScan[i*OW_ROMCODE_SIZE+CRC]
 						);
-						
-						sensorValues[(pos*SENSORSIZE)+VALUE1]     = cel;
-						sensorValues[(pos*SENSORSIZE)+VALUE2]     = cel_frac_bits;
-						sensorValues[(pos*SENSORSIZE)+SIGN]       = sign;
-
-
-						unsigned char sensorexport[30];
-						sprintf_P((char*)sensorexport, PSTR("%02X%02X%02X%02X%02X%02X%02X%02X %c%d.%04d"),
-						sensorValues[(pos*SENSORSIZE)+FAMILY],
-						sensorValues[(pos*SENSORSIZE)+ID1],
-						sensorValues[(pos*SENSORSIZE)+ID2],
-						sensorValues[(pos*SENSORSIZE)+ID3],
-						sensorValues[(pos*SENSORSIZE)+ID4],
-						sensorValues[(pos*SENSORSIZE)+ID5],
-						sensorValues[(pos*SENSORSIZE)+ID6],
-						sensorValues[(pos*SENSORSIZE)+CRC],
-						sensorValues[(pos*SENSORSIZE)+SIGN],
-						sensorValues[(pos*SENSORSIZE)+VALUE1],
-						frac
-						);
-
-						
-						uint8_t sercrc = 0;
-						for (uint8_t u=0; u<25; u++)
+						if (sensorValues[(pos*SENSORSIZE)+VALUE1] != cel || sensorValues[(pos*SENSORSIZE)+VALUE2] != cel_frac_bits || sensorValues[(pos*SENSORSIZE)+SIGN] != sign)
 						{
-							sercrc = sercrc + sensorexport[u];
+							sensorValues[(pos*SENSORSIZE)+VALUE1]     = cel;
+							sensorValues[(pos*SENSORSIZE)+VALUE2]     = cel_frac_bits;
+							sensorValues[(pos*SENSORSIZE)+SIGN]       = sign;
+							coap_send_OW(pos);
 						}
-						
-						#ifdef OW_DEBUG
-						printf("%s %d\r\n", sensorexport, sercrc);
-						#endif
-
 
 						
 						#ifdef OW_DEBUG

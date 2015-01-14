@@ -1,4 +1,11 @@
 /************************************************************************
+2.21 Changelog 
+* Rettet procent beregning på forsiden
+* Tilføjet CoAP support, der sendes nu opdateringer via UDP hvis det er aktiveret (default).
+-Kombineret med stokerlog.dk giver dette en næsten øjeblikkelig opdatering af sensor værdier når man ser på sensor listen "Min side".
+* Den tidsbaserede upload via HTTP er stadig aktiv, til forbindelser hvor UDP ikke er mulig mv. 
+
+
 2.20 Changelog 12.12.2014
 * Alle 8 alarmer virker
 * Tilføjet ajax save funktion til alarm siden, så den ikke reloader for hver alarm.
@@ -408,7 +415,7 @@ int main(void){
 		eepromWriteStr(1000, "stokerlog.dk", 13); //host
 		eepromWriteStr(1100, "/incoming.php?v=1", 18); //url
 		eepromWriteByte(60, 2); //Analog interval
-		eepromWriteByte(61, 2); //Digital interval
+		eepromWriteByte(61, 1); //Digital interval
 		eepromWriteByte(62, 2); //Onewire interval
 		eepromWriteByte(63, 5); //DHT interval		
 	}
@@ -874,6 +881,9 @@ void updateAnalogSensors(void)
 {
 	//Send ADC+digital pins
 	//ADC pins
+	bool change = false;
+	uint32_t res = 0;
+	
 	for (uint8_t i=0; i<=7; i++)
 	{
 		uint8_t eepos = 100 + i;
@@ -881,21 +891,27 @@ void updateAnalogSensors(void)
 
 		if (simpleSensorTypes[i] == TYPE_ADC)  //ADC
 		{
-			simpleSensorValues[i] = readOversampledAdc(i);
+			if ((res = readOversampledAdc(i)) != simpleSensorValues[i]) change = true;
+			simpleSensorValues[i] = res;
 		}
 
 		if (simpleSensorTypes[i] == TYPE_DIGIN)  //DIGITAL
 		{
-			if (GETBIT(PINA, i) > 0)
-			simpleSensorValues[i] = 1;
-			else
-			simpleSensorValues[i] = 0;
+			res = GETBIT(PINA, i);
+			if (res > 0) res=1;
+			if (res != simpleSensorValues[i]) change=true;
+			simpleSensorValues[i] = res;
 		}
-	}	
+	}
+	if (change)
+	{
+		coap_send_analog();
+	}
 }
 
 void updateSimpleSensors(void)
 {
+	bool change = false;
 	//Digital pins
 	for (uint8_t i=0; i<=3; i++)
 	{
@@ -905,11 +921,15 @@ void updateSimpleSensors(void)
 		if (simpleSensorTypes[i+8] == TYPE_DIGIN || simpleSensorTypes[i+8] == TYPE_DIGOUT)  //DIGITAL
 		{
 		  	//Digital pins is C2-5
-			if (GETBIT(PINC, (i+2)) > 0)
-				simpleSensorValues[i+8] = 1;
-			else
-				simpleSensorValues[i+8] = 0;
+			uint8_t val = GETBIT(PINC, (i+2));
+			if (val > 0) val = 1;
+			if (val != simpleSensorValues[i+8]) change=true;
+			simpleSensorValues[i+8] = val;
 		}
+	}
+	if (change)
+	{
+		coap_send_digital();
 	}
 	//3=COUNTER or DHT, not handled here, 0=digital out
 

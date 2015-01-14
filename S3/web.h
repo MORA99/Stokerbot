@@ -57,7 +57,8 @@ uint16_t fill_custom_client_data(uint8_t *bufptr,uint16_t len);
  void checkTimedEvents();
  void initTimedEvents();
 
- #define WEBSERVER_VHOST "stokerlog.dk"
+void coap_send_digital(void);
+void coap_send_analog(void);
+void coap_send_OW(uint8_t id);
 
-
-#endif
+ #endif
