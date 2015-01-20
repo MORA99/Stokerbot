@@ -135,7 +135,7 @@ void updateOWSensors()
 					}
 
 					if ( DS18X20_read_meas( sensorID, &subzero, &cel, &cel_frac_bits, &maalt) == DS18X20_OK ) {
-						int frac = cel_frac_bits*DS18X20_FRACCONV;  //Ganger de sidste par bits, med det step DS18B20 bruger
+						
 						char sign = (subzero) ? '-' : '+';
 
 						uint16_t pos = findSensor(
@@ -158,6 +158,8 @@ void updateOWSensors()
 
 						
 						#ifdef OW_DEBUG
+						int frac = cel_frac_bits*DS18X20_FRACCONV;  //Ganger de sidste par bits, med det step DS18B20 bruger
+						
 						printf_P(PSTR("Sensor# %d (%02X%02X%02X%02X%02X%02X%02X%02X) =  : %c%d.%04d\r\n"),i+1,
 						sensorValues[(pos*SENSORSIZE)+FAMILY],
 						sensorValues[(pos*SENSORSIZE)+ID1],

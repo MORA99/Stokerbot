@@ -4,13 +4,11 @@
   #include "config.h"
   #include "AVR035.h"
 
-#define EEPROM_VERSION 4
+#define EEPROM_VERSION 5
 #define SBNG_VERSION_MAJOR 2
-#define SBNG_VERSION_MINOR 20
+#define SBNG_VERSION_MINOR 21
 
 //BUILD TARGET
-//REV 1 - Ingen ekstern eeprom, ingen onboard 2401 til egen report
-//REV 2 - Ekstern eeprom til hjemmesider, 2401 onboard til egen rapportering
 //REV 3 - S3S Atmega1284P, ingen ekstern eeprom
 //REV 50 - Vandbot R1 - 1284P, MCP23008, HW watchdog
 #define SBNG_TARGET 3
@@ -30,7 +28,7 @@ enum SensorData { FAMILY, ID1, ID2, ID3, ID4, ID5, ID6, CRC, VALUE1, VALUE2, SIG
 
 uint8_t sensorValues[MAXSENSORS*SENSORSIZE];
 uint8_t *sensorScan; //peger på tempbuf
-char tempbuf[4096];
+char tempbuf[4096]; //Used for various string manipulation
 
 //8ADC+4digital for at der er plads til de digitale hvis de er input
 volatile uint32_t simpleSensorValues[100];

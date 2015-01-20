@@ -8,14 +8,14 @@
 #define TRANS_NUM_WWWMAC 2
 
 uint8_t gw_arp_state = 0;
-uint8_t wwwip[4] = {144,76,16,173};
+uint8_t wwwip[4] = {144,76,16,173}; //Stokerlog.dk as of Oktober 2014, fallback if DNS fails
 
 uint32_t last_rio_event = 0;
 uint32_t uptime = 0;
 uint16_t coapid = 0;
 uint16_t timed_events[12*4];
 
-static int8_t dns_state=2;
+static int8_t dns_state=0;
 uint8_t start_web_client=0;
 static uint32_t web_client_attempts=0;
 static uint32_t web_client_sendok=0;
@@ -35,6 +35,8 @@ static uint8_t wwwmac[6];
 
 uint8_t sendBoxData=0;
 uint8_t httpType = 0;
+
+uint8_t coapclient = 1;
 
 extern void reScheduleTasks();
 extern void timedSaveEeprom();
@@ -129,9 +131,10 @@ void lcd_update()
 	}
 }
 
-//called once per second
+
 void initTimedEvents()
 {
+	coapclient = eepromReadByte(1500);
 	printf("Init timed_events \r\n");
 	for (uint16_t i=0; i<(12*4); i++)
 	{
@@ -139,6 +142,7 @@ void initTimedEvents()
 	}
 }
 
+//called once per second
 void checkTimedEvents()
 {
 	uptime++;
@@ -491,6 +495,7 @@ uint16_t coap_prepare()
 
 void coap_send_digital()
 {
+	if (coapclient != 1) return;
 	uint16_t p = coap_prepare();
 	
 	p += sprintf(&tempbuf[p], "{\"id\":\"%02X%02X%02X%02X%02X%02X%02X%02X\",\"v\":1,\"sensors\":[{\"name\":\"D0\",\"value\":\"%lu\"},{\"name\":\"D1\",\"value\":\"%lu\"},{\"name\":\"D2\",\"value\":\"%lu\"},{\"name\":\"D3\",\"value\":\"%lu\"}]}",
@@ -503,6 +508,7 @@ void coap_send_digital()
 
 void coap_send_analog()
 {
+	if (coapclient != 1) return;
 	uint16_t p = coap_prepare();
 	
 	p += sprintf(&tempbuf[p], "{\"id\":\"%02X%02X%02X%02X%02X%02X%02X%02X\",\"v\":1,\"sensors\":[{\"name\":\"ADC0\",\"value\":\"%lu\"},{\"name\":\"ADC1\",\"value\":\"%lu\"},{\"name\":\"ADC2\",\"value\":\"%lu\"},{\"name\":\"ADC3\",\"value\":\"%lu\"},{\"name\":\"ADC4\",\"value\":\"%lu\"},{\"name\":\"ADC5\",\"value\":\"%lu\"},{\"name\":\"ADC6\",\"value\":\"%lu\"},{\"name\":\"ADC7\",\"value\":\"%lu\"}]}",
@@ -515,6 +521,7 @@ void coap_send_analog()
 
 void coap_send_OW(uint8_t pos)
 {
+	if (coapclient != 1) return;
 	uint16_t p = coap_prepare();
 	
 	int frac = sensorValues[(pos*SENSORSIZE)+VALUE2]*DS18X20_FRACCONV;  //Ganger de sidste par bits, med det step DS18B20 bruger
@@ -786,7 +793,8 @@ uint16_t print_webclient_webpage(uint8_t *buf)
 	char orgurl[100];
 	eepromReadStr(1101,orgurl,99);
 	eepromReadStr(1000,host,99);
-	sprintf_P(tempbuf, PSTR("<SCRIPT> var interval = %u; var host = '%s'; var url='%s'; </SCRIPT>"), interval, host, orgurl);
+	uint8_t coap = eepromReadByte(1500);
+	sprintf_P(tempbuf, PSTR("<SCRIPT>var interval = %u;var host = '%s';var url='%s';var coap = %i;</SCRIPT>"), interval, host, orgurl, coap);
 	plen=fill_tcp_data(buf,plen,tempbuf);
 
 	plen=print_flash_webpage_only(webclient_htm, buf, plen);
@@ -1186,8 +1194,8 @@ void handle_net(void)
             if (dns_state!=2){
                     // retry every minute if dns-lookup failed:
                     if (tickDiffS(dnsTimer) > 20){
-						printf_P(PSTR("Retry dns lookup ... \r\n"));
-                            dns_state=0;
+						printf_P(PSTR("DNS lookup failed, using fallback IP ... \r\n"));
+                            dns_state=2;
                     }
                     // don't try to use web client before
                     // we have a result of dns-lookup
@@ -1486,6 +1494,7 @@ void handle_net(void)
 			uint8_t length = find_key_val((char *)&(buf[dat_p+4]),cgival, 99,"host");
 			if (length > 0 && length <= 99)
 			{
+				save_checkbox_cgivalue((char*)&(buf[dat_p+4]), "coap", 1500); //Placed here to make sure its not set to 0 when first requesting the page
 				urldecode(cgival);
 				cgival[strlen(cgival)] = '\0';
 				eepromSaveStr(1000, cgival, strlen(cgival)+1);
@@ -1502,7 +1511,8 @@ void handle_net(void)
 				eepromSaveStr(1101, cgival, strlen(cgival)+1);
 				printf("URL changed to %s ", cgival);
 			}
-		
+			
+			coapclient = eepromReadByte(1500);
 			dat_p=print_webclient_webpage(buf);
 			goto SENDTCP;			  
 	} else if (strncmp_P((char *)&(buf[dat_p+4]),PSTR("/fmu.js"), 7)==0){	

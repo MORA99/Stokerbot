@@ -1,5 +1,5 @@
 /************************************************************************
-2.21 Changelog 
+2.21 Changelog 20.01.2015
 * Rettet procent beregning på forsiden
 * Tilføjet CoAP support, der sendes nu opdateringer via UDP hvis det er aktiveret (default).
 -Kombineret med stokerlog.dk giver dette en næsten øjeblikkelig opdatering af sensor værdier når man ser på sensor listen "Min side".
@@ -16,6 +16,7 @@
 * webfiles flyttet til egen fil
 * IP og evt. andet data sendes til boxdata.php, som viser det under enheder, bl.a. for at finde bottens lokale ip når den bruger DHCP.
 * Svag intern pullup kan aktiveres under IO
+* Tællere udvidet til 32bit
 * fmu2 lagt sammen med fmu.js, loader.js flyttet til progammet
 * Forsiden på botten opdatere sig selv vha ajax
 * Mindre rettelser til onewire koden
@@ -396,6 +397,8 @@ int main(void){
 		{
 			eepromSaveDword(2500 + i*4, 0);
 		}		
+		
+		eepromWriteByte(1500, 1); //CoAP
 	}
 
 	if (dnsip[0] == 255)
@@ -432,6 +435,11 @@ int main(void){
 			eepromSaveDword(2500 + i*4, eepromReadWord(160+i*2));
 		}		
 	}	
+
+	if (eepromReadByte(1) < 5)
+	{
+		eepromWriteByte(1500, 1); //CoAP
+	}
 
 		eepromWriteByte(1, EEPROM_VERSION);
 

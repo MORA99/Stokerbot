@@ -37,6 +37,14 @@
 	1000-1100 HTTP URL
 	1101	HTTP client enabled
 	1102	HTTP client send ?id=xyz
+	1200	HTTP client interval
+	
+	1500	CoAP client enabled
+	1501	CoAP server enabled
+	1502	CoAP setup allowed (0=no, 1=yes, 2=AUTH_ALL, 3=AUTH_SETUP)
+	1510	CoAP username 0-9chars
+	1520	CoAP password 0-79chars
+	
 	
 	2000	Analog sensor values (32bit)
 	2500	Digital sensor values (32bit)

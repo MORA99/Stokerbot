@@ -1,6 +1,8 @@
 <SCRIPT SRC='/loader.js'></SCRIPT>
 <script>
 menu(2,1);
+
+dw('<h2>HTTP Client</h2>');
 formstart('/settings/webclient');
 dw('<br>Data is sent every ');
 sels("interval");
@@ -12,7 +14,6 @@ opt("180", interval, "30 minuttes");
 opt("0", interval, "Never (Disabled)");
 sele();dw(" (change takes effect on next upload or reboot)");
 dw('<br>To http://');f('text','host',host,50);dw(' / ');f('text','url',url,50);dw(' &id=xyz&sensor..n=value..n<br>');
-formend();
 </script>
 
 The hostname and url must be entered into the 2 seperate fields.<br>
@@ -20,3 +21,6 @@ Hostname must be a valid domain name or an IPv4 address.<br>
 The url will be postfixed with &id=xyz&ADC0=10&ADC1=12 etc.<br>
 So make sure it already contains ?something=val<br>
 Defaults are stokerlog.dk / incoming.php?v=1 <br>
+
+<h2>CoAP sender</h2>
+CoAP client enabled (same host as HTTP): <script>cb('coap',coap,1);formend();</script>
